@@ -1,0 +1,19 @@
+{
+  "name": "@qianwen-agent/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "App.tsx",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@qianwen-agent/shared": "workspace:*",
+    "expo": "^53.0.9",
+    "react": "^19.1.0",
+    "react-native": "^0.79.2"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.5",
+    "typescript": "^5.8.3"
+  }
+}

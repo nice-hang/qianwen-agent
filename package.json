@@ -1,0 +1,14 @@
+{
+  "name": "qianwen-agent",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev:web": "pnpm --filter @qianwen-agent/web dev",
+    "dev:server": "pnpm --filter @qianwen-agent/server dev",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

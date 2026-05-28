@@ -12,24 +12,24 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 
 目标：建立项目骨架，让 UI、Server、Agent 能使用同一套类型和协议。
 
-- [ ] 初始化 monorepo
-- [ ] 创建 `apps/web`
-- [ ] 创建 `apps/mobile`
-- [ ] 创建 `apps/server`
-- [ ] 创建 `packages/shared`
-- [ ] 创建 `packages/agent-runtime`
-- [ ] 创建 `packages/observability`
-- [ ] 在 `apps/server/src/adapters` 建立 Agent/Observability 适配器目录
-- [ ] 定义基础类型：Message、Conversation、Attachment、AgentEvent
-- [ ] 定义 SSE-like stream parser 初版
-- [ ] 定义基础 API client
+- [x] 初始化 monorepo
+- [x] 创建 `apps/web`
+- [x] 创建 `apps/mobile`
+- [x] 创建 `apps/server`
+- [x] 创建 `packages/shared`
+- [x] 创建 `packages/agent-runtime`
+- [x] 创建 `packages/observability`
+- [x] 在 `apps/server/src/adapters` 建立 Agent/Observability 适配器目录
+- [x] 定义基础类型：Message、Conversation、Attachment、AgentEvent
+- [x] 定义 SSE-like stream parser 初版
+- [x] 定义基础 API client
 
 验收：
 
-- [ ] Web 能启动
-- [ ] Server health check 能访问
-- [ ] shared 类型能被 Web 和 Server 引用
-- [ ] `apps/server` 能 import `packages/agent-runtime` 和 `packages/observability`
+- [x] Web 能启动
+- [x] Server health check 能访问
+- [x] shared 类型能被 Web 和 Server 引用
+- [x] `apps/server` 能 import `packages/agent-runtime` 和 `packages/observability`
 
 ## Stage 1: 最小聊天闭环
 

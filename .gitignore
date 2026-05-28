@@ -1,0 +1,10 @@
+node_modules
+dist
+.turbo
+.DS_Store
+
+apps/server/data
+apps/server/uploads
+
+*.log
+pnpm-debug.log*

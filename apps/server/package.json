@@ -1,0 +1,22 @@
+{
+  "name": "@qianwen-agent/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@qianwen-agent/agent-runtime": "workspace:*",
+    "@qianwen-agent/observability": "workspace:*",
+    "@qianwen-agent/shared": "workspace:*",
+    "fastify": "^5.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

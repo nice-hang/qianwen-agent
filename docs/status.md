@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Stage 0: Monorepo 骨架与共享协议
+Stage 1: 最小聊天闭环
 
 ## 已完成
 
@@ -13,20 +13,19 @@ Stage 0: Monorepo 骨架与共享协议
 - [x] 编写 `README.md`
 - [x] 编写 `AGENTS.md`
 - [x] 编写 `docs/roadmap.md`
+- [x] 完成 Stage 0 monorepo workspace 初始化
+- [x] 创建 `apps/web`、`apps/mobile`、`apps/server`
+- [x] 创建 `packages/shared`、`packages/agent-runtime`、`packages/observability`
+- [x] 定义基础 shared 类型、AgentEvent、SSE-like parser 和 API client
+- [x] Server 实现 `/health` 并验证能 import agent-runtime / observability
+- [x] Web 最小页面能启动并引用 shared 类型
 
 ## 进行中
 
-- [ ] 等待开始 Stage 0 实现
+- [ ] 准备开始 Stage 1 最小聊天闭环
 
 ## 未开始
 
-- [ ] Monorepo 初始化
-- [ ] Web app
-- [ ] Mobile app
-- [ ] Server app
-- [ ] Shared package
-- [ ] Agent Runtime package
-- [ ] Observability package
 - [ ] 最小聊天闭环
 - [ ] Run trace
 - [ ] 深度思考
@@ -42,8 +41,8 @@ Stage 0: Monorepo 骨架与共享协议
 
 ## 下一步
 
-1. 初始化 monorepo。
-2. 创建 `apps/web`、`apps/server`、`apps/mobile`、`packages/shared`、`packages/agent-runtime`、`packages/observability`。
-3. 在 `apps/server/src/adapters` 中建立 Agent/Observability 适配器目录。
-4. 定义 shared 类型和 stream event 协议。
-5. 启动 Web 和 Server 的最小健康检查。
+1. 接入 Prisma + SQLite。
+2. 建立 conversations/messages 基础表。
+3. 实现 `POST /api/chat/stream` 的最小文本链路。
+4. 实现 QwenProvider 普通文本调用。
+5. Web 渲染流式回答和历史消息。
