@@ -1,6 +1,75 @@
 # Qianwen Agent Chatbox
 
-千问类跨端 Chatbox demo。项目采用 monorepo 组织，包含 Web、React Native、Server、Agent Runtime 和调试可观测能力。
+千问AI Chatbox 全栈应用。项目采用 monorepo 组织，包含 Web、React Native、Server、Agent Runtime 和可观测能力。
+
+## 目录结构
+
+```txt
+qianwen-agent/
+  apps/
+    web/                    # React Web Chatbox
+    mobile/                 # React Native App
+    server/                 # Node.js Server，负责 API、DB、stream、uploads、adapters
+
+  packages/
+    shared/                 # 前后端共享类型、协议、stream parser
+    agent-runtime/          # Agent Runtime，被 apps/server import，不单独部署
+    observability/          # trace/metrics 类型和接口，被 server/agent 复用
+    ui/                     # 可选：跨端可复用的轻 UI/主题 token
+
+  docs/
+    product/                # 稳定产品规划
+    architecture/           # 稳定架构文档
+    implementation/         # roadmap/status/handoff
+    adr/                    # 关键技术决策
+
+  discuss/                  # 讨论过程、调研、阶段性结论
+
+  AGENTS.md                 # 给后续 coding agent 的项目入口
+  README.md
+```
+
+`apps/server` 只保留应用边界和适配器：
+
+```txt
+apps/server/
+  src/
+    api/                    # routes/controllers
+    services/               # conversation/message/run/upload services
+    storage/                # Prisma client、repositories
+    stream/                 # POST stream、SSE-like event writer
+    config/                 # env、provider key、server config
+    adapters/               # package interface 到 server 实现的适配器
+      agent/                # AgentStorage、AttachmentResolver 等实现
+      observability/        # PrismaTraceSink 等实现
+
+  prisma/
+    schema.prisma
+    migrations/
+
+  data/                     # SQLite db，gitignore
+  uploads/                  # 本地图片/文件，gitignore
+```
+
+Agent 和可观测分别作为 package：
+
+```txt
+packages/agent-runtime/
+  src/
+    runtime/                # AgentRuntime、AgentLoop
+    context/                # ContextBuilder
+    providers/              # QwenProvider
+    tools/                  # app 自建工具，如 memory_write
+    memory/                 # MemoryManager
+    thought/                # ThoughtPresenter
+    types/                  # Agent 内部类型
+
+packages/observability/
+  src/
+    trace/                  # RunTrace、TraceEvent、TraceSink
+    metrics/                # latency、token usage helpers
+    types/                  # observability 类型
+```
 
 MVP 目标：
 
@@ -16,7 +85,6 @@ MVP 暂不做：
 
 - 完整 RAG 知识库
 - MCP / Skill / Subagent
-- LangGraph 固定编排
 - 生图/视频
 - 完整账号体系
 - 产品运营大盘
@@ -45,7 +113,7 @@ UI
 Server
   -> 保存 user message
   -> 创建 agent_run
-Agent
+Agent Runtime package
   -> 构造上下文
   -> 调 Qwen API
   -> 输出 AgentEvent
@@ -54,52 +122,6 @@ Server
   -> 保存 assistant message / usage / trace
 UI
   -> 渲染深度思考、来源、最终回答
-```
-
-## Monorepo 目录结构
-
-```txt
-qianwen-agent/
-  apps/
-    web/                    # React Web Chatbox
-    mobile/                 # React Native App
-    server/                 # Node.js Server，包含 API + Agent Runtime
-
-  packages/
-    shared/                 # 前后端共享类型、协议、stream parser
-    ui/                     # 可选：跨端可复用的轻 UI/主题 token
-
-  docs/
-    product/                # 稳定产品规划
-    architecture/           # 稳定架构文档
-    implementation/         # roadmap/status/handoff
-    adr/                    # 关键技术决策
-
-  discuss/                  # 讨论过程、调研、阶段性结论
-
-  AGENTS.md                 # 给后续 coding agent 的项目入口
-  README.md
-```
-
-`apps/server` 内部继续分模块：
-
-```txt
-apps/server/
-  src/
-    api/                    # routes/controllers
-    services/               # conversation/message/run/upload services
-    agent/                  # AgentRuntime、AgentLoop、ContextBuilder
-    tools/                  # app 自建工具，如 memory_write
-    models/                 # QwenProvider
-    storage/                # Prisma client、repositories
-    observability/          # run trace、metrics、debug query
-
-  prisma/
-    schema.prisma
-    migrations/
-
-  data/                     # SQLite db，gitignore
-  uploads/                  # 本地图片/文件，gitignore
 ```
 
 ## UI
@@ -157,7 +179,7 @@ SQLite 作为本地文件数据库，不需要单独运行数据库服务。后�
 
 ## Agent
 
-Agent 是 Server 内部运行时，不单独部署。
+Agent Runtime 是独立 package，被 Server import，不单独部署。
 
 模块：
 
@@ -194,7 +216,7 @@ App 自建工具只做项目内状态能力：
 
 ## 数据与上下文
 
-Server 完整保存 messages，Agent 每轮只消费 ContextBuilder 构造的模型输入投影：
+Server 完整保存 messages，Agent Runtime 每轮只消费 ContextBuilder 构造的模型输入投影：
 
 ```txt
 system instruction
