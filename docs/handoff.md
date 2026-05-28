@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-准备进入 Stage 1：最小聊天闭环。
+准备进入 Stage 2：Run Trace 与 Debug。
 
 ## 当前状态
 
@@ -13,6 +13,9 @@
 - `pnpm typecheck` 已通过。
 - `pnpm --filter @qianwen-agent/server start` 可启动 server，`GET /health` 返回 ok。
 - `pnpm --filter @qianwen-agent/web dev` 可启动 web，页面引用 `@qianwen-agent/shared` 类型。
+- Stage 1 已完成：Prisma + SQLite、conversation/message 表、conversation API、`POST /api/chat/stream`、QwenProvider、Web 聊天 UI。
+- 已用真实 `DASHSCOPE_API_KEY` 验证 Qwen OpenAI-compatible stream，能输出连续 `answer_delta` 和 `done`，并保存 assistant message。
+- 无 key 时 `POST /api/chat/stream` 会保存 user message，并返回带 `conversationId` 的 error event，便于前端恢复已保存会话。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -23,7 +26,7 @@
 - Server 使用 Node.js / TypeScript。
 - Agent Runtime 拆到 `packages/agent-runtime`，被 `apps/server` import，MVP 不单独部署。
 - Observability 拆到 `packages/observability`，提供 trace/metrics 类型和接口；Server 负责 Prisma 落库适配。
-- 数据库 MVP 使用 Prisma + SQLite，Stage 1 开始接入。
+- 数据库 MVP 使用 Prisma + SQLite，Stage 1 已接入。
 - 流式通信使用 `POST /api/chat/stream` + fetch ReadableStream + SSE-like parser。
 - 深度思考优先使用千问 provider 的 `enable_thinking`。
 - 联网搜索优先使用千问 provider 的 `enable_search`。
@@ -47,12 +50,10 @@
 
 ## 下一步建议
 
-1. 接入 Prisma + SQLite。
-2. 建立 conversations/messages 基础表。
-3. 实现 `POST /api/chat/stream`。
-4. 实现 QwenProvider 普通文本调用。
-5. Server 保存 user / assistant message。
-6. Web 渲染流式回答和历史消息。
+1. 创建 Stage 2 solution：Run Trace 与 Debug。
+2. 建立 `agent_runs`、`agent_events`、`model_usages`。
+3. 记录 TTFE / TTFA / TTC、provider latency、token usage。
+4. 实现 debug API 和 Web timeline。
 
 ## 阻塞项
 

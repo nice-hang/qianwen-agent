@@ -1,4 +1,4 @@
-import type { AgentEvent, ChatStreamRequest } from "./types";
+import type { AgentEvent, ChatMessage, ChatStreamRequest, Conversation } from "./types";
 import { decodeAgentEvent, parseSseLikeStreamChunk } from "./stream";
 
 export interface ApiClientOptions {
@@ -6,9 +6,13 @@ export interface ApiClientOptions {
   fetchImpl?: typeof fetch;
 }
 
-export interface HealthResponse {
-  ok: boolean;
-  service: string;
+export interface ConversationsResponse {
+  conversations: Conversation[];
+}
+
+export interface MessagesResponse {
+  conversation: Conversation;
+  messages: ChatMessage[];
 }
 
 export function createApiClient(options: ApiClientOptions = {}) {
@@ -16,15 +20,28 @@ export function createApiClient(options: ApiClientOptions = {}) {
   const fetchImpl = options.fetchImpl ?? fetch;
 
   return {
-    async health(): Promise<HealthResponse> {
-      const response = await fetchImpl(`${baseUrl}/health`);
+    async listConversations(): Promise<ConversationsResponse> {
+      const response = await fetchImpl(`${baseUrl}/api/conversations`);
       if (!response.ok) {
-        throw new Error(`Health check failed: ${response.status}`);
+        throw new Error(`List conversations failed: ${response.status}`);
       }
-      return response.json() as Promise<HealthResponse>;
+      return response.json() as Promise<ConversationsResponse>;
+    },
+
+    async listMessages(conversationId: string): Promise<MessagesResponse> {
+      const response = await fetchImpl(
+        `${baseUrl}/api/conversations/${conversationId}/messages`
+      );
+
+      if (!response.ok) {
+        throw new Error(`List messages failed: ${response.status}`);
+      }
+
+      return response.json() as Promise<MessagesResponse>;
     },
 
     async *streamChat(request: ChatStreamRequest): AsyncIterable<AgentEvent> {
+      // POST stream 允许客户端发送 JSON，同时继续接收增量事件。
       const response = await fetchImpl(`${baseUrl}/api/chat/stream`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -39,6 +56,7 @@ export function createApiClient(options: ApiClientOptions = {}) {
       const decoder = new TextDecoder();
       let buffer = "";
 
+      // 只解析完整 SSE-like block，末尾不完整部分继续留在 buffer。
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;

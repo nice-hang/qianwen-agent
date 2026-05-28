@@ -2,6 +2,9 @@ node_modules
 dist
 .turbo
 .DS_Store
+.env
+.env.*
+!.env.example
 
 apps/server/data
 apps/server/uploads

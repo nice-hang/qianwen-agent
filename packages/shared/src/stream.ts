@@ -6,6 +6,7 @@ export interface SseLikeChunk {
 }
 
 export function parseSseLikeStreamChunk(input: string): SseLikeChunk[] {
+  // 解析一个或多个由空行分隔的完整 SSE-like block。
   return input
     .split(/\n\n+/)
     .map((block) => block.trim())
@@ -30,6 +31,7 @@ export function parseSseLikeStreamChunk(input: string): SseLikeChunk[] {
 }
 
 export function encodeAgentEvent(event: AgentEvent): string {
+  // 使用 text/event-stream framing，payload 仍保持 shared JSON。
   return `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
 }
 

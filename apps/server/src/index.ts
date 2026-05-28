@@ -1,41 +1,36 @@
 import Fastify from "fastify";
-import { createAgentRuntime } from "@qianwen-agent/agent-runtime";
-import { createNoopTraceSink } from "@qianwen-agent/observability";
-import type { AgentEvent } from "@qianwen-agent/shared";
+import cors from "@fastify/cors";
+import { runAgent } from "@qianwen-agent/agent-runtime";
+import { registerChatRoutes } from "./api/chat";
+import { registerConversationRoutes } from "./api/conversations";
+import { loadConfig } from "./config/env";
+import { createConversationRepository } from "./storage/conversation-repository";
+import { prisma } from "./storage/prisma";
 
 export function buildServer() {
   const app = Fastify({ logger: true });
-  const agentRuntime = createAgentRuntime();
-  const traceSink = createNoopTraceSink();
+  const conversationRepository = createConversationRepository(prisma);
 
-  app.get("/health", async () => {
-    const event: AgentEvent = { type: "phase", phase: "answering" };
+  void app.register(cors, {
+    origin: true
+  });
 
-    await traceSink.recordEvent({
-      id: "stage0-health-event",
-      runId: "stage0-health",
-      kind: "agent_event",
-      timestamp: new Date().toISOString(),
-      agentEvent: event
-    });
+  app.get("/health", async () => ({
+    ok: true,
+    service: "qianwen-agent-server"
+  }));
 
-    return {
-      ok: true,
-      service: "qianwen-agent-server",
-      imports: {
-        agentRuntime: typeof agentRuntime.run === "function",
-        observability: typeof traceSink.recordEvent === "function",
-        shared: event.type
-      }
-    };
+  registerConversationRoutes(app, conversationRepository);
+  registerChatRoutes(app, {
+    runAgent,
+    conversations: conversationRepository
   });
 
   return app;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const port = Number(process.env.PORT ?? 3001);
-  const host = process.env.HOST ?? "0.0.0.0";
+  const { port, host } = loadConfig();
   const app = buildServer();
 
   await app.listen({ port, host });

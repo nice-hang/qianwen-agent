@@ -35,22 +35,22 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 
 目标：打通最小文本聊天链路。
 
-- [ ] 接入 Prisma + SQLite
-- [ ] 建立 conversations/messages 基础表
-- [ ] 实现 `POST /api/chat/stream`
-- [ ] 实现 QwenProvider 普通文本调用
-- [ ] Server 保存 user message
-- [ ] Server 流式返回 `answer_delta`
-- [ ] Server 保存 assistant message
-- [ ] Web 渲染流式回答
-- [ ] Web 支持历史消息展示
+- [x] 接入 Prisma + SQLite
+- [x] 建立 conversations/messages 基础表
+- [x] 实现 `POST /api/chat/stream`
+- [x] 实现 QwenProvider 普通文本调用
+- [x] Server 保存 user message
+- [x] Server 流式返回 `answer_delta`
+- [x] Server 保存 assistant message
+- [x] Web 渲染流式回答
+- [x] Web 支持历史消息展示
 
 验收：
 
-- [ ] 用户能创建/进入会话
-- [ ] 用户能发送文本消息
-- [ ] 回答能流式展示
-- [ ] 刷新页面后能恢复历史消息
+- [x] 用户能创建/进入会话
+- [x] 用户能发送文本消息
+- [x] 回答能流式展示
+- [x] 刷新页面后能恢复历史消息
 
 ## Stage 2: Run Trace 与 Debug
 
