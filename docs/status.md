@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Stage 2: Run Trace 与 Debug
+Stage 3: 深度思考
 
 ## 已完成
 
@@ -25,14 +25,19 @@ Stage 2: Run Trace 与 Debug
 - [x] 实现 `POST /api/chat/stream`
 - [x] 实现 Qwen OpenAI-compatible 普通文本流式 provider
 - [x] Web 实现会话列表、聊天消息、composer 和流式回答展示
+- [x] 完成 Stage 2 Run Trace 与 Debug
+- [x] 建立 `agent_runs`、`agent_events`、`model_usages`
+- [x] 记录 TTFE / TTFA / TTC 和 provider latency
+- [x] 保存 Qwen streaming usage
+- [x] 实现 `/debug/runs` 和 `/debug/runs/:runId`
+- [x] Web 实现 Debug 视图、run 列表、timeline、耗时和 usage 展示
 
 ## 进行中
 
-- [ ] 准备开始 Stage 2 Run Trace 与 Debug
+- [ ] 准备开始 Stage 3 深度思考
 
 ## 未开始
 
-- [ ] Run trace
 - [ ] 深度思考
 - [ ] 联网搜索
 - [ ] 图片理解
@@ -42,12 +47,13 @@ Stage 2: Run Trace 与 Debug
 
 - RN 的 fetch streaming 兼容性需要实际验证。
 - 千问 provider 的 `reasoning_content`、`enable_search`、usage 返回格式需要在真实 API 调用中校准。
+- 已用 `stream_options.include_usage` 验证 Qwen stream usage 能返回并落库；后续 reasoning tokens 需要在 deep mode 下再次校准。
 - 本地图片上传转 base64 data URL 需要控制大小，避免超过 provider 限制。
 - 已用真实 `DASHSCOPE_API_KEY` 验证 Stage 1 Qwen OpenAI-compatible 流式调用；本地 `.env` 已被 gitignore。
 
 ## 下一步
 
-1. 建立 `agent_runs`、`agent_events`、`model_usages`。
-2. 记录 TTFE / TTFA / TTC 和 provider latency。
-3. 实现 `/debug/runs` 和 `/debug/runs/:id`。
-4. Web 展示 run 列表和详情 timeline。
+1. 编写 Stage 3 深度思考方案。
+2. 在请求协议中加入 `mode: fast | deep` 和可选 `thinkingBudget`。
+3. 调研并接入 Qwen `enable_thinking` / `reasoning_content`。
+4. Web 展示思考区域，Debug 记录 TTFR 和 reasoning token。

@@ -26,10 +26,50 @@ export type AgentEvent =
       runId: string;
       messageId?: string;
       conversationId?: string;
+      usage?: TokenUsage;
     }
   | { type: "error"; message: string; code?: string; conversationId?: string };
 
 export interface ChatStreamRequest {
   conversationId?: string;
   message: string;
+}
+
+export interface AgentRunSummary {
+  id: string;
+  conversationId?: string | null;
+  status: "running" | "completed" | "failed";
+  startedAt: string;
+  completedAt?: string | null;
+  failedAt?: string | null;
+  errorMessage?: string | null;
+  ttfeMs?: number | null;
+  ttfaMs?: number | null;
+  ttcMs?: number | null;
+  providerMs?: number | null;
+}
+
+export interface AgentTraceEvent {
+  id: string;
+  runId: string;
+  type: string;
+  at: string;
+  offsetMs: number;
+  message?: string | null;
+  data?: unknown;
+}
+
+export interface TokenUsage {
+  provider: string;
+  model: string;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  reasoningTokens?: number | null;
+  totalTokens?: number | null;
+  raw?: unknown;
+}
+
+export interface ModelUsage extends TokenUsage {
+  id: string;
+  runId: string;
 }

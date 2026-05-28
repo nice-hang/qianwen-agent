@@ -56,22 +56,22 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 
 目标：尽早具备调试可观测能力，方便后续调 Agent。
 
-- [ ] 建立 `agent_runs`
-- [ ] 建立 `agent_events`
-- [ ] 建立 `model_usages`
-- [ ] 记录 TTFE / TTFA / TTC
-- [ ] 记录 provider latency
-- [ ] 保存 Qwen usage
-- [ ] 实现 `/debug/runs`
-- [ ] 实现 `/debug/runs/:id`
-- [ ] Web 展示 run 列表和详情 timeline
+- [x] 建立 `agent_runs`
+- [x] 建立 `agent_events`
+- [x] 建立 `model_usages`
+- [x] 记录 TTFE / TTFA / TTC
+- [x] 记录 provider latency
+- [x] 保存 Qwen usage
+- [x] 实现 `/debug/runs`
+- [x] 实现 `/debug/runs/:id`
+- [x] Web 展示 run 列表和详情 timeline
 
 验收：
 
-- [ ] 每次回答都有 run trace
-- [ ] 能看到事件时间线
-- [ ] 能看到 token usage
-- [ ] 失败/中断能定位到 run
+- [x] 每次回答都有 run trace
+- [x] 能看到事件时间线
+- [x] 能看到 token usage
+- [x] 失败/中断能定位到 run
 
 ## Stage 3: 深度思考
 

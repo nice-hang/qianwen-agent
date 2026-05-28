@@ -1,4 +1,12 @@
-import type { AgentEvent, ChatMessage, ChatStreamRequest, Conversation } from "./types";
+import type {
+  AgentEvent,
+  AgentRunSummary,
+  AgentTraceEvent,
+  ChatMessage,
+  ChatStreamRequest,
+  Conversation,
+  ModelUsage
+} from "./types";
 import { decodeAgentEvent, parseSseLikeStreamChunk } from "./stream";
 
 export interface ApiClientOptions {
@@ -13,6 +21,16 @@ export interface ConversationsResponse {
 export interface MessagesResponse {
   conversation: Conversation;
   messages: ChatMessage[];
+}
+
+export interface RunsResponse {
+  runs: AgentRunSummary[];
+}
+
+export interface RunDetailResponse {
+  run: AgentRunSummary;
+  events: AgentTraceEvent[];
+  usage?: ModelUsage;
 }
 
 export function createApiClient(options: ApiClientOptions = {}) {
@@ -38,6 +56,22 @@ export function createApiClient(options: ApiClientOptions = {}) {
       }
 
       return response.json() as Promise<MessagesResponse>;
+    },
+
+    async listRuns(): Promise<RunsResponse> {
+      const response = await fetchImpl(`${baseUrl}/debug/runs`);
+      if (!response.ok) {
+        throw new Error(`List runs failed: ${response.status}`);
+      }
+      return response.json() as Promise<RunsResponse>;
+    },
+
+    async getRun(runId: string): Promise<RunDetailResponse> {
+      const response = await fetchImpl(`${baseUrl}/debug/runs/${runId}`);
+      if (!response.ok) {
+        throw new Error(`Get run failed: ${response.status}`);
+      }
+      return response.json() as Promise<RunDetailResponse>;
     },
 
     async *streamChat(request: ChatStreamRequest): AsyncIterable<AgentEvent> {

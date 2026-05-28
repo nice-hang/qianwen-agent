@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-准备进入 Stage 2：Run Trace 与 Debug。
+准备进入 Stage 3：深度思考。
 
 ## 当前状态
 
@@ -16,6 +16,9 @@
 - Stage 1 已完成：Prisma + SQLite、conversation/message 表、conversation API、`POST /api/chat/stream`、QwenProvider、Web 聊天 UI。
 - 已用真实 `DASHSCOPE_API_KEY` 验证 Qwen OpenAI-compatible stream，能输出连续 `answer_delta` 和 `done`，并保存 assistant message。
 - 无 key 时 `POST /api/chat/stream` 会保存 user message，并返回带 `conversationId` 的 error event，便于前端恢复已保存会话。
+- Stage 2 已完成：Server 会为每次聊天创建 run trace，记录事件 timeline、TTFE、TTFA、TTC、provider latency 和 Qwen token usage。
+- 已实现 `GET /debug/runs` 和 `GET /debug/runs/:runId`，Web 有 Chat / Debug 视图切换，可查看 run 列表、timeline、耗时和 usage。
+- 已用真实 Qwen stream 验证 `stream_options.include_usage`，`done` event 和 `model_usages` 都能拿到 token usage。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -26,6 +29,7 @@
 - Server 使用 Node.js / TypeScript。
 - Agent Runtime 拆到 `packages/agent-runtime`，被 `apps/server` import，MVP 不单独部署。
 - Observability 拆到 `packages/observability`，提供 trace/metrics 类型和接口；Server 负责 Prisma 落库适配。
+- Stage 2 不引入 TraceSink / OpenTelemetry，直接在 Server 用 Prisma 写 run trace，等出现第二种存储再抽象。
 - 数据库 MVP 使用 Prisma + SQLite，Stage 1 已接入。
 - 流式通信使用 `POST /api/chat/stream` + fetch ReadableStream + SSE-like parser。
 - 深度思考优先使用千问 provider 的 `enable_thinking`。
@@ -50,10 +54,10 @@
 
 ## 下一步建议
 
-1. 创建 Stage 2 solution：Run Trace 与 Debug。
-2. 建立 `agent_runs`、`agent_events`、`model_usages`。
-3. 记录 TTFE / TTFA / TTC、provider latency、token usage。
-4. 实现 debug API 和 Web timeline。
+1. 创建 Stage 3 solution：深度思考。
+2. 明确 `mode: fast | deep`、`thinkingBudget` 和默认行为。
+3. 接入 Qwen `enable_thinking`，解析 `reasoning_content`。
+4. 增加 `reasoning_delta` / `thinking_summary` 事件、Web 思考展示和 Debug TTFR / reasoning token。
 
 ## 阻塞项
 

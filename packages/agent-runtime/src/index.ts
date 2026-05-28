@@ -1,4 +1,4 @@
-import type { AgentEvent, ChatMessage } from "@qianwen-agent/shared";
+import type { AgentEvent, ChatMessage, TokenUsage } from "@qianwen-agent/shared";
 
 type RuntimeEnv = Record<string, string | undefined>;
 
@@ -24,7 +24,21 @@ interface QwenStreamChunk {
     };
     finish_reason?: string | null;
   }>;
+  usage?: QwenUsage | null;
 }
+
+interface QwenUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  completion_tokens_details?: {
+    reasoning_tokens?: number;
+  };
+}
+
+type QwenTextStreamEvent =
+  | { type: "text"; text: string }
+  | { type: "usage"; usage: TokenUsage };
 
 const DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 const DEFAULT_MODEL = "qwen-plus";
@@ -34,19 +48,26 @@ export async function* runAgent(
   options: RunAgentOptions = {}
 ): AsyncIterable<AgentEvent> {
   const env = options.env ?? readProcessEnv();
+  let usage: TokenUsage | undefined;
 
-  for await (const text of streamQwenText(buildProviderMessages(input.messages), {
+  for await (const event of streamQwenText(buildProviderMessages(input.messages), {
     apiKey: env.QWEN_API_KEY ?? env.DASHSCOPE_API_KEY,
     baseUrl: env.QWEN_BASE_URL ?? DEFAULT_BASE_URL,
     model: env.QWEN_MODEL ?? DEFAULT_MODEL,
     fetchImpl: options.fetchImpl ?? fetch
   })) {
-    yield { type: "answer_delta", text };
+    if (event.type === "usage") {
+      usage = event.usage;
+      continue;
+    }
+
+    yield { type: "answer_delta", text: event.text };
   }
 
   yield {
     type: "done",
-    runId: crypto.randomUUID()
+    runId: crypto.randomUUID(),
+    usage
   };
 }
 
@@ -77,12 +98,12 @@ function buildProviderMessages(messages: ChatMessage[]): ProviderMessage[] {
 async function* streamQwenText(
   messages: ProviderMessage[],
   options: {
-  apiKey?: string;
-  baseUrl: string;
-  model: string;
-  fetchImpl: typeof fetch;
+    apiKey?: string;
+    baseUrl: string;
+    model: string;
+    fetchImpl: typeof fetch;
   }
-): AsyncIterable<string> {
+): AsyncIterable<QwenTextStreamEvent> {
   // 没有密钥时允许 Server 启动，但真实聊天请求会明确失败。
   if (!options.apiKey) {
     throw new Error("QWEN_API_KEY or DASHSCOPE_API_KEY is required for chat.");
@@ -99,7 +120,8 @@ async function* streamQwenText(
       body: JSON.stringify({
         model: options.model,
         messages,
-        stream: true
+        stream: true,
+        stream_options: { include_usage: true }
       })
     }
   );
@@ -127,18 +149,21 @@ async function* streamQwenText(
     const ready = buffer.slice(0, boundary);
     buffer = buffer.slice(boundary + 2);
 
-    for (const text of parseOpenAiCompatibleChunks(ready)) {
-      yield text;
+    for (const event of parseOpenAiCompatibleChunks(ready, options.model)) {
+      yield event;
     }
   }
 
-  for (const text of parseOpenAiCompatibleChunks(buffer)) {
-    yield text;
+  for (const event of parseOpenAiCompatibleChunks(buffer, options.model)) {
+    yield event;
   }
 }
 
-function* parseOpenAiCompatibleChunks(input: string): Iterable<string> {
-  // Qwen OpenAI-compatible stream 的文本在 choices[0].delta.content。
+function* parseOpenAiCompatibleChunks(
+  input: string,
+  model: string
+): Iterable<QwenTextStreamEvent> {
+  // Qwen OpenAI-compatible stream 的文本在 choices[0].delta.content，usage 在末尾 chunk。
   for (const block of input.split(/\n\n+/)) {
     for (const line of block.split(/\n/)) {
       if (!line.startsWith("data:")) continue;
@@ -148,9 +173,24 @@ function* parseOpenAiCompatibleChunks(input: string): Iterable<string> {
 
       const chunk = JSON.parse(data) as QwenStreamChunk;
       const text = chunk.choices?.[0]?.delta?.content;
-      if (text) yield text;
+      if (text) yield { type: "text", text };
+      if (chunk.usage) {
+        yield { type: "usage", usage: toTokenUsage(chunk.usage, model) };
+      }
     }
   }
+}
+
+function toTokenUsage(usage: QwenUsage, model: string): TokenUsage {
+  return {
+    provider: "qwen",
+    model,
+    inputTokens: usage.prompt_tokens,
+    outputTokens: usage.completion_tokens,
+    reasoningTokens: usage.completion_tokens_details?.reasoning_tokens,
+    totalTokens: usage.total_tokens,
+    raw: usage
+  };
 }
 
 async function safeReadError(response: Response): Promise<string> {

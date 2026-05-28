@@ -28,6 +28,51 @@ model Message {
   @@index([conversationId, createdAt])
 }
 
+model AgentRun {
+  id             String       @id @default(cuid())
+  conversationId String?
+  status         RunStatus
+  startedAt      DateTime     @default(now())
+  completedAt    DateTime?
+  failedAt       DateTime?
+  errorMessage   String?
+  ttfeMs         Int?
+  ttfaMs         Int?
+  ttcMs          Int?
+  providerMs     Int?
+  events         AgentEvent[]
+  usage          ModelUsage?
+
+  @@index([startedAt])
+  @@index([conversationId])
+}
+
+model AgentEvent {
+  id       String   @id @default(cuid())
+  runId    String
+  run      AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  type     String
+  at       DateTime @default(now())
+  offsetMs Int
+  message  String?
+  dataJson String?
+
+  @@index([runId, at])
+}
+
+model ModelUsage {
+  id              String   @id @default(cuid())
+  runId           String   @unique
+  run             AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  provider        String
+  model           String
+  inputTokens     Int?
+  outputTokens    Int?
+  reasoningTokens Int?
+  totalTokens     Int?
+  rawJson         String?
+}
+
 enum MessageRole {
   user
   assistant
@@ -35,6 +80,12 @@ enum MessageRole {
 
 enum MessageStatus {
   streaming
+  completed
+  failed
+}
+
+enum RunStatus {
+  running
   completed
   failed
 }

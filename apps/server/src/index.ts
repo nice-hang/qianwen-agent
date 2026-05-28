@@ -3,13 +3,16 @@ import cors from "@fastify/cors";
 import { runAgent } from "@qianwen-agent/agent-runtime";
 import { registerChatRoutes } from "./api/chat";
 import { registerConversationRoutes } from "./api/conversations";
+import { registerDebugRoutes } from "./api/debug";
 import { loadConfig } from "./config/env";
 import { createConversationRepository } from "./storage/conversation-repository";
 import { prisma } from "./storage/prisma";
+import { createTraceRepository } from "./storage/trace-repository";
 
 export function buildServer() {
   const app = Fastify({ logger: true });
   const conversationRepository = createConversationRepository(prisma);
+  const traceRepository = createTraceRepository(prisma);
 
   void app.register(cors, {
     origin: true
@@ -23,8 +26,10 @@ export function buildServer() {
   registerConversationRoutes(app, conversationRepository);
   registerChatRoutes(app, {
     runAgent,
-    conversations: conversationRepository
+    conversations: conversationRepository,
+    traces: traceRepository
   });
+  registerDebugRoutes(app, traceRepository);
 
   return app;
 }
