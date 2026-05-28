@@ -85,6 +85,7 @@ function RunMetrics(props: { run: AgentRunSummary }) {
   return (
     <div className="metrics">
       <Metric label="TTFE" value={props.run.ttfeMs} />
+      <Metric label="TTFR" value={props.run.ttfrMs} />
       <Metric label="TTFA" value={props.run.ttfaMs} />
       <Metric label="TTC" value={props.run.ttcMs} />
       <Metric label="Provider" value={props.run.providerMs} />
@@ -106,6 +107,7 @@ function UsageSummary(props: { usage: ModelUsage }) {
     <div className="usage">
       <span>model: {props.usage.model}</span>
       <span>input: {props.usage.inputTokens ?? "-"}</span>
+      <span>reasoning: {props.usage.reasoningTokens ?? "-"}</span>
       <span>output: {props.usage.outputTokens ?? "-"}</span>
       <span>total: {props.usage.totalTokens ?? "-"}</span>
     </div>

@@ -8,6 +8,7 @@ export interface ChatMessage {
   role: MessageRole;
   status: MessageStatus;
   content: string;
+  reasoningContent?: string | null;
   createdAt: string;
 }
 
@@ -20,6 +21,7 @@ export interface Conversation {
 }
 
 export type AgentEvent =
+  | { type: "reasoning_delta"; text: string }
   | { type: "answer_delta"; text: string }
   | {
       type: "done";
@@ -33,6 +35,8 @@ export type AgentEvent =
 export interface ChatStreamRequest {
   conversationId?: string;
   message: string;
+  mode?: "fast" | "deep";
+  thinkingBudget?: number;
 }
 
 export interface AgentRunSummary {
@@ -44,6 +48,7 @@ export interface AgentRunSummary {
   failedAt?: string | null;
   errorMessage?: string | null;
   ttfeMs?: number | null;
+  ttfrMs?: number | null;
   ttfaMs?: number | null;
   ttcMs?: number | null;
   providerMs?: number | null;

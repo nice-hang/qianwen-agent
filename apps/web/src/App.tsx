@@ -26,6 +26,8 @@ export function App() {
   const [runEvents, setRunEvents] = useState<AgentTraceEvent[]>([]);
   const [runUsage, setRunUsage] = useState<ModelUsage>();
   const [draft, setDraft] = useState("");
+  const [mode, setMode] = useState<"fast" | "deep">("fast");
+  const [thinkingBudget, setThinkingBudget] = useState(500);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -152,7 +154,9 @@ export function App() {
     // 消费 shared AgentEvent 流，把增量内容合并进乐观 assistant 气泡。
     for await (const streamEvent of api.streamChat({
       conversationId: activeConversationId,
-      message: text
+      message: text,
+      mode,
+      thinkingBudget: mode === "deep" ? thinkingBudget : undefined
     })) {
       await applyStreamEvent(streamEvent, optimistic, state);
     }
@@ -168,6 +172,11 @@ export function App() {
   ) {
     if (event.type === "answer_delta") {
       appendAssistantText(optimistic.assistant.id, event.text);
+      return;
+    }
+
+    if (event.type === "reasoning_delta") {
+      appendAssistantReasoning(optimistic.assistant.id, event.text);
       return;
     }
 
@@ -195,6 +204,19 @@ export function App() {
       current.map((message) =>
         message.id === messageId
           ? { ...message, content: message.content + text }
+          : message
+      )
+    );
+  }
+
+  function appendAssistantReasoning(messageId: string, text: string) {
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              reasoningContent: `${message.reasoningContent ?? ""}${text}`
+            }
           : message
       )
     );
@@ -297,8 +319,12 @@ export function App() {
           error={error}
           isSending={isSending}
           messages={messages}
+          mode={mode}
           onDraftChange={setDraft}
+          onModeChange={setMode}
           onSubmit={handleSubmit}
+          onThinkingBudgetChange={setThinkingBudget}
+          thinkingBudget={thinkingBudget}
         />
       ) : (
         <DebugView
@@ -338,6 +364,7 @@ function createOptimisticMessages(
       role: "user",
       status: "completed",
       content: text,
+      reasoningContent: null,
       createdAt
     },
     assistant: {
@@ -346,6 +373,7 @@ function createOptimisticMessages(
       role: "assistant",
       status: "streaming",
       content: "",
+      reasoningContent: "",
       createdAt
     }
   };

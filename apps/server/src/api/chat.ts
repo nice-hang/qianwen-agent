@@ -27,6 +27,7 @@ export function registerChatRoutes(
     const runStartedAt = run.startedAt;
     const runStartedMs = Date.now();
     let firstEventMs: number | undefined;
+    let firstReasoningMs: number | undefined;
     let firstAnswerMs: number | undefined;
     let providerStartedMs: number | undefined;
     let providerDoneMs: number | undefined;
@@ -101,17 +102,35 @@ export function registerChatRoutes(
       await recordTrace("user_message_saved", { conversationId: conversation.id });
 
       const messages = await options.conversations.listMessages(conversation.id);
+      const mode = request.body.mode === "deep" ? "deep" : "fast";
+      const thinkingBudget = normalizeThinkingBudget(request.body.thinkingBudget);
+      const reasoningParts: string[] = [];
       const assistantParts: string[] = [];
       let assistantMessage: ChatMessage | null = null;
 
       providerStartedMs = Date.now();
-      await recordTrace("provider_request_started");
+      await recordTrace("provider_request_started", {
+        mode,
+        thinkingBudget
+      });
 
       // Agent 返回异步事件流；每个事件都会原样转发给前端。
       for await (const event of options.runAgent({
         conversationId: conversation.id,
-        messages
+        messages,
+        mode,
+        thinkingBudget
       })) {
+        if (event.type === "reasoning_delta") {
+          if (firstReasoningMs === undefined) {
+            firstReasoningMs = Date.now() - runStartedMs;
+            await recordTrace("first_reasoning_delta");
+          }
+          reasoningParts.push(event.text);
+          writeAgentEvent(reply, event);
+          continue;
+        }
+
         if (event.type === "answer_delta") {
           if (firstAnswerMs === undefined) {
             firstAnswerMs = Date.now() - runStartedMs;
@@ -133,6 +152,7 @@ export function registerChatRoutes(
             conversationId: conversation.id,
             role: "assistant",
             content: assistantContent,
+            reasoningContent: reasoningParts.join("") || undefined,
             status: assistantContent ? "completed" : "failed"
           });
           await options.conversations.touchConversation(conversation.id);
@@ -142,6 +162,7 @@ export function registerChatRoutes(
           await options.traces.completeRun({
             runId: run.id,
             ttfeMs: firstEventMs,
+            ttfrMs: firstReasoningMs,
             ttfaMs: firstAnswerMs,
             ttcMs: Date.now() - runStartedMs,
             providerMs:
@@ -169,7 +190,8 @@ export function registerChatRoutes(
         assistantMessage = await options.conversations.addMessage({
           conversationId: conversation.id,
           role: "assistant",
-          content: assistantParts.join("")
+          content: assistantParts.join(""),
+          reasoningContent: reasoningParts.join("") || undefined
         });
         await options.conversations.touchConversation(conversation.id);
         await recordTrace("assistant_message_saved", {
@@ -178,6 +200,7 @@ export function registerChatRoutes(
         await options.traces.completeRun({
           runId: run.id,
           ttfeMs: firstEventMs,
+          ttfrMs: firstReasoningMs,
           ttfaMs: firstAnswerMs,
           ttcMs: Date.now() - runStartedMs,
           providerMs:
@@ -201,6 +224,7 @@ export function registerChatRoutes(
         runId: run.id,
         errorMessage: message,
         ttfeMs: firstEventMs,
+        ttfrMs: firstReasoningMs,
         ttfaMs: firstAnswerMs,
         ttcMs: Date.now() - runStartedMs,
         providerMs: providerStartedMs ? Date.now() - providerStartedMs : undefined
@@ -227,4 +251,9 @@ function normalizeConversationTitle(title: string): string {
 
   if (!normalized) return "New chat";
   return normalized.length > 40 ? `${normalized.slice(0, 40)}...` : normalized;
+}
+
+function normalizeThinkingBudget(value: number | undefined): number | undefined {
+  if (!value || !Number.isFinite(value)) return undefined;
+  return Math.max(1, Math.floor(value));
 }

@@ -43,6 +43,7 @@ export function createConversationRepository(db: PrismaClient) {
     conversationId: string;
     role: MessageRole;
     content: string;
+    reasoningContent?: string;
     status?: "streaming" | "completed" | "failed";
   }): Promise<ChatMessage> {
     const message = await db.message.create({
@@ -50,7 +51,8 @@ export function createConversationRepository(db: PrismaClient) {
         conversationId: input.conversationId,
         role: input.role,
         status: input.status ?? "completed",
-        content: input.content
+        content: input.content,
+        reasoningContent: input.reasoningContent
       }
     });
 

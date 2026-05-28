@@ -23,6 +23,7 @@ model Message {
   role           MessageRole
   status         MessageStatus @default(completed)
   content        String
+  reasoningContent String?
   createdAt      DateTime      @default(now())
 
   @@index([conversationId, createdAt])
@@ -37,6 +38,7 @@ model AgentRun {
   failedAt       DateTime?
   errorMessage   String?
   ttfeMs         Int?
+  ttfrMs         Int?
   ttfaMs         Int?
   ttcMs          Int?
   providerMs     Int?

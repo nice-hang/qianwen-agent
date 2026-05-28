@@ -77,20 +77,20 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 
 目标：接入千问 thinking 能力，并在前端展示产品化思考过程。
 
-- [ ] 支持 `mode: fast | deep`
-- [ ] deep mode 开启 `enable_thinking`
-- [ ] 配置 `thinking_budget`
-- [ ] 解析 `reasoning_content`
-- [ ] 输出 `reasoning_delta` / `thinking_summary`
-- [ ] Web 展示深度思考卡片
-- [ ] Debug 中记录 TTFR 和 reasoning tokens
+- [x] 支持 `mode: fast | deep`
+- [x] deep mode 开启 `enable_thinking`
+- [x] 配置 `thinking_budget`
+- [x] 解析 `reasoning_content`
+- [x] 输出 `reasoning_delta`
+- [x] Web 展示深度思考卡片
+- [x] Debug 中记录 TTFR 和 reasoning tokens
 
 验收：
 
-- [ ] 快速/深度模式可切换
-- [ ] deep 模式能看到思考内容或摘要
-- [ ] 最终答案和思考区域分区展示
-- [ ] Debug 能看到 TTFR / reasoning token
+- [x] 快速/深度模式可切换
+- [x] deep 模式能看到思考内容
+- [x] 最终答案和思考区域分区展示
+- [x] Debug 能看到 TTFR / reasoning token
 
 ## Stage 4: 联网搜索
 

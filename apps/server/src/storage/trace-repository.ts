@@ -62,6 +62,7 @@ export function createTraceRepository(db: PrismaClient) {
   async function completeRun(input: {
     runId: string;
     ttfeMs?: number;
+    ttfrMs?: number;
     ttfaMs?: number;
     ttcMs: number;
     providerMs?: number;
@@ -72,6 +73,7 @@ export function createTraceRepository(db: PrismaClient) {
         status: "completed",
         completedAt: new Date(),
         ttfeMs: input.ttfeMs,
+        ttfrMs: input.ttfrMs,
         ttfaMs: input.ttfaMs,
         ttcMs: input.ttcMs,
         providerMs: input.providerMs
@@ -83,6 +85,7 @@ export function createTraceRepository(db: PrismaClient) {
     runId: string;
     errorMessage: string;
     ttfeMs?: number;
+    ttfrMs?: number;
     ttfaMs?: number;
     ttcMs: number;
     providerMs?: number;
@@ -94,6 +97,7 @@ export function createTraceRepository(db: PrismaClient) {
         failedAt: new Date(),
         errorMessage: input.errorMessage,
         ttfeMs: input.ttfeMs,
+        ttfrMs: input.ttfrMs,
         ttfaMs: input.ttfaMs,
         ttcMs: input.ttcMs,
         providerMs: input.providerMs
@@ -182,6 +186,7 @@ function toRunSummary(run: AgentRun): AgentRunSummary {
     failedAt: run.failedAt?.toISOString() ?? null,
     errorMessage: run.errorMessage,
     ttfeMs: run.ttfeMs,
+    ttfrMs: run.ttfrMs,
     ttfaMs: run.ttfaMs,
     ttcMs: run.ttcMs,
     providerMs: run.providerMs

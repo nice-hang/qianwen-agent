@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Stage 3: 深度思考
+Stage 4: 联网搜索
 
 ## 已完成
 
@@ -31,14 +31,20 @@ Stage 3: 深度思考
 - [x] 保存 Qwen streaming usage
 - [x] 实现 `/debug/runs` 和 `/debug/runs/:runId`
 - [x] Web 实现 Debug 视图、run 列表、timeline、耗时和 usage 展示
+- [x] 完成 Stage 3 深度思考
+- [x] `POST /api/chat/stream` 支持 `mode: fast | deep` 和 `thinkingBudget`
+- [x] Agent Runtime 支持 Qwen `enable_thinking` / `thinking_budget`
+- [x] 解析并流式输出 `reasoning_delta`
+- [x] Server 保存 assistant `reasoningContent`
+- [x] Debug 记录并展示 TTFR 和 reasoning tokens
+- [x] Web 支持 Fast / Deep 模式切换和思考内容展示
 
 ## 进行中
 
-- [ ] 准备开始 Stage 3 深度思考
+- [ ] 准备开始 Stage 4 联网搜索
 
 ## 未开始
 
-- [ ] 深度思考
 - [ ] 联网搜索
 - [ ] 图片理解
 - [ ] 轻量记忆
@@ -46,14 +52,14 @@ Stage 3: 深度思考
 ## 已知风险
 
 - RN 的 fetch streaming 兼容性需要实际验证。
-- 千问 provider 的 `reasoning_content`、`enable_search`、usage 返回格式需要在真实 API 调用中校准。
-- 已用 `stream_options.include_usage` 验证 Qwen stream usage 能返回并落库；后续 reasoning tokens 需要在 deep mode 下再次校准。
+- 千问 provider 的 `enable_search` 和搜索来源返回格式需要在真实 API 调用中校准。
+- 已用真实 Qwen deep stream 验证 `reasoning_content`、TTFR 和 reasoning tokens。
 - 本地图片上传转 base64 data URL 需要控制大小，避免超过 provider 限制。
 - 已用真实 `DASHSCOPE_API_KEY` 验证 Stage 1 Qwen OpenAI-compatible 流式调用；本地 `.env` 已被 gitignore。
 
 ## 下一步
 
-1. 编写 Stage 3 深度思考方案。
-2. 在请求协议中加入 `mode: fast | deep` 和可选 `thinkingBudget`。
-3. 调研并接入 Qwen `enable_thinking` / `reasoning_content`。
-4. Web 展示思考区域，Debug 记录 TTFR 和 reasoning token。
+1. 编写 Stage 4 联网搜索方案。
+2. 在请求协议中加入 `search: auto | off | force`。
+3. 调研并接入 Qwen `enable_search` / `search_options`。
+4. Web 展示搜索状态和来源，Debug 记录搜索配置与相关 usage。

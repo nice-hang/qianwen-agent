@@ -7,8 +7,12 @@ interface ChatViewProps {
   error?: string;
   isSending: boolean;
   messages: ChatMessage[];
+  mode: "fast" | "deep";
   onDraftChange: (draft: string) => void;
+  onModeChange: (mode: "fast" | "deep") => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onThinkingBudgetChange: (budget: number) => void;
+  thinkingBudget: number;
 }
 
 export function ChatView(props: ChatViewProps) {
@@ -41,6 +45,38 @@ export function ChatView(props: ChatViewProps) {
       {props.error ? <div className="error">{props.error}</div> : null}
 
       <form className="composer" onSubmit={props.onSubmit}>
+        <div className="composer-controls">
+          <div className="mode-switch" aria-label="Chat mode">
+            <button
+              className={props.mode === "fast" ? "active" : undefined}
+              type="button"
+              onClick={() => props.onModeChange("fast")}
+            >
+              Fast
+            </button>
+            <button
+              className={props.mode === "deep" ? "active" : undefined}
+              type="button"
+              onClick={() => props.onModeChange("deep")}
+            >
+              Deep
+            </button>
+          </div>
+          {props.mode === "deep" ? (
+            <label className="thinking-budget">
+              <span>Budget</span>
+              <input
+                min={1}
+                step={50}
+                type="number"
+                value={props.thinkingBudget}
+                onChange={(event) =>
+                  props.onThinkingBudgetChange(Number(event.target.value))
+                }
+              />
+            </label>
+          ) : null}
+        </div>
         <textarea
           value={props.draft}
           onChange={(event) => props.onDraftChange(event.target.value)}
@@ -61,6 +97,12 @@ function MessageBubble(props: { message: ChatMessage }) {
   return (
     <article className={`bubble ${message.role}`}>
       <span>{message.role}</span>
+      {message.reasoningContent ? (
+        <div className="thinking-block">
+          <strong>Thinking</strong>
+          <p>{message.reasoningContent}</p>
+        </div>
+      ) : null}
       <p>{message.content || (message.status === "streaming" ? "..." : "")}</p>
     </article>
   );

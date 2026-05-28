@@ -10,6 +10,8 @@ export interface RunAgentOptions {
 export interface AgentRunInput {
   conversationId: string;
   messages: ChatMessage[];
+  mode?: "fast" | "deep";
+  thinkingBudget?: number;
 }
 
 interface ProviderMessage {
@@ -21,6 +23,7 @@ interface QwenStreamChunk {
   choices?: Array<{
     delta?: {
       content?: string;
+      reasoning_content?: string;
     };
     finish_reason?: string | null;
   }>;
@@ -37,6 +40,7 @@ interface QwenUsage {
 }
 
 type QwenTextStreamEvent =
+  | { type: "reasoning"; text: string }
   | { type: "text"; text: string }
   | { type: "usage"; usage: TokenUsage };
 
@@ -54,10 +58,17 @@ export async function* runAgent(
     apiKey: env.QWEN_API_KEY ?? env.DASHSCOPE_API_KEY,
     baseUrl: env.QWEN_BASE_URL ?? DEFAULT_BASE_URL,
     model: env.QWEN_MODEL ?? DEFAULT_MODEL,
+    mode: input.mode ?? "fast",
+    thinkingBudget: normalizeThinkingBudget(input.thinkingBudget),
     fetchImpl: options.fetchImpl ?? fetch
   })) {
     if (event.type === "usage") {
       usage = event.usage;
+      continue;
+    }
+
+    if (event.type === "reasoning") {
+      yield { type: "reasoning_delta", text: event.text };
       continue;
     }
 
@@ -101,6 +112,8 @@ async function* streamQwenText(
     apiKey?: string;
     baseUrl: string;
     model: string;
+    mode: "fast" | "deep";
+    thinkingBudget?: number;
     fetchImpl: typeof fetch;
   }
 ): AsyncIterable<QwenTextStreamEvent> {
@@ -121,7 +134,11 @@ async function* streamQwenText(
         model: options.model,
         messages,
         stream: true,
-        stream_options: { include_usage: true }
+        stream_options: { include_usage: true },
+        enable_thinking: options.mode === "deep",
+        ...(options.mode === "deep" && options.thinkingBudget
+          ? { thinking_budget: options.thinkingBudget }
+          : {})
       })
     }
   );
@@ -172,13 +189,20 @@ function* parseOpenAiCompatibleChunks(
       if (!data || data === "[DONE]") continue;
 
       const chunk = JSON.parse(data) as QwenStreamChunk;
+      const reasoning = chunk.choices?.[0]?.delta?.reasoning_content;
       const text = chunk.choices?.[0]?.delta?.content;
+      if (reasoning) yield { type: "reasoning", text: reasoning };
       if (text) yield { type: "text", text };
       if (chunk.usage) {
         yield { type: "usage", usage: toTokenUsage(chunk.usage, model) };
       }
     }
   }
+}
+
+function normalizeThinkingBudget(value: number | undefined): number | undefined {
+  if (!value || !Number.isFinite(value)) return undefined;
+  return Math.max(1, Math.floor(value));
 }
 
 function toTokenUsage(usage: QwenUsage, model: string): TokenUsage {

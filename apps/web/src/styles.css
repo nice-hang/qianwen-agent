@@ -49,6 +49,7 @@ body {
 .view-switch button,
 .conversation-list button,
 .composer button,
+.mode-switch button,
 .refresh,
 .run-list button {
   border: 0;
@@ -220,6 +221,22 @@ h1 {
   margin: 0;
 }
 
+.thinking-block {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-left: 3px solid #6f8fb3;
+  border-radius: 8px;
+  background: #f4f7fb;
+  color: #46576d;
+}
+
+.thinking-block strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #46576d;
+  font-size: 12px;
+}
+
 .error {
   margin: 0 28px 12px;
   padding: 10px 12px;
@@ -231,11 +248,55 @@ h1 {
 
 .composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px;
+  grid-template-columns: 180px minmax(0, 1fr) 96px;
   gap: 12px;
   padding: 18px 28px 24px;
   background: #ffffff;
   border-top: 1px solid #dce4ef;
+}
+
+.composer-controls {
+  display: grid;
+  align-content: stretch;
+  gap: 8px;
+}
+
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.mode-switch button {
+  min-height: 36px;
+  background: #eef2f7;
+  color: #56677d;
+  font-weight: 800;
+}
+
+.mode-switch button.active,
+.mode-switch button:hover {
+  background: #17202a;
+  color: #ffffff;
+}
+
+.thinking-budget {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  color: #64758b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.thinking-budget input {
+  min-width: 0;
+  border: 1px solid #cbd6e3;
+  border-radius: 8px;
+  padding: 7px 8px;
+  color: #17202a;
+  font: inherit;
 }
 
 .composer textarea {
@@ -316,7 +377,7 @@ h1 {
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
   gap: 12px;
   margin-bottom: 14px;
 }

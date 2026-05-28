@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-准备进入 Stage 3：深度思考。
+准备进入 Stage 4：联网搜索。
 
 ## 当前状态
 
@@ -19,6 +19,8 @@
 - Stage 2 已完成：Server 会为每次聊天创建 run trace，记录事件 timeline、TTFE、TTFA、TTC、provider latency 和 Qwen token usage。
 - 已实现 `GET /debug/runs` 和 `GET /debug/runs/:runId`，Web 有 Chat / Debug 视图切换，可查看 run 列表、timeline、耗时和 usage。
 - 已用真实 Qwen stream 验证 `stream_options.include_usage`，`done` event 和 `model_usages` 都能拿到 token usage。
+- Stage 3 已完成：Web 支持 Fast / Deep 模式切换，Server / Agent Runtime 支持 `enable_thinking` 和 `thinking_budget`。
+- 已用真实 Qwen deep stream 验证 `reasoning_delta`、`answer_delta`、TTFR、reasoning tokens 和刷新后恢复 `reasoningContent`。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -33,6 +35,7 @@
 - 数据库 MVP 使用 Prisma + SQLite，Stage 1 已接入。
 - 流式通信使用 `POST /api/chat/stream` + fetch ReadableStream + SSE-like parser。
 - 深度思考优先使用千问 provider 的 `enable_thinking`。
+- 深度思考内容保存到 assistant message 的 `reasoningContent`，不单独建 thinking 表。
 - 联网搜索优先使用千问 provider 的 `enable_search`。
 - 图片 MVP 存本地 uploads，调用模型时临时转 base64 data URL。
 - 可观测 MVP 只做 run trace、性能指标和 token usage，不做产品运营大盘。
@@ -54,10 +57,10 @@
 
 ## 下一步建议
 
-1. 创建 Stage 3 solution：深度思考。
-2. 明确 `mode: fast | deep`、`thinkingBudget` 和默认行为。
-3. 接入 Qwen `enable_thinking`，解析 `reasoning_content`。
-4. 增加 `reasoning_delta` / `thinking_summary` 事件、Web 思考展示和 Debug TTFR / reasoning token。
+1. 创建 Stage 4 solution：联网搜索。
+2. 明确 `search: auto | off | force` 的默认行为。
+3. 接入 Qwen `enable_search` / `search_options`。
+4. 增加搜索状态事件、来源展示和 Debug 搜索配置记录。
 
 ## 阻塞项
 

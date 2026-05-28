@@ -23,6 +23,7 @@ export function toChatMessage(message: Message): ChatMessage {
     role: message.role as MessageRole,
     status: message.status as MessageStatus,
     content: message.content,
+    reasoningContent: message.reasoningContent,
     createdAt: message.createdAt.toISOString()
   };
 }
