@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-准备进入 Stage 4：联网搜索。
+准备进入 Stage 5：联网搜索。
 
 ## 当前状态
 
@@ -24,6 +24,10 @@
 - Stage 3.5 已完成：参考国内版千问 `https://www.qianwen.com/` 登录态界面优化当前 Web UI。
 - Stage 3.5 已隐藏未实现能力入口，只展示当前真实可用能力。
 - Stage 3.5 已采集参考截图和本地 desktop/mobile、空会话、思考 composer 状态截图。
+- 已调研国内版千问真实会话结构：普通内容以 Markdown string 为主，Markdown 不适合表达的业务块通过 `[(source_seq)]` marker 关联 `multi_load` sidecar 数据。
+- Stage 4 已完成：前端 Markdown 区块渲染优化，不改 Qwen system prompt，不改消息存储结构。
+- Stage 4 已接入 `react-markdown` 和 `remark-gfm`，assistant content 和 reasoningContent 均使用 MarkdownRenderer。
+- Stage 4 已实现 CodeBlock、TableBlock、inline code、heading、list、blockquote、link、hr 等渲染样式。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -39,7 +43,8 @@
 - 流式通信使用 `POST /api/chat/stream` + fetch ReadableStream + SSE-like parser。
 - 深度思考优先使用千问 provider 的 `enable_thinking`。
 - 深度思考内容保存到 assistant message 的 `reasoningContent`，不单独建 thinking 表。
-- 联网搜索优先使用千问 provider 的 `enable_search`。
+- MarkdownRenderer 使用 Markdown 原生能力渲染标题、列表、代码块、表格、引用和链接。
+- 联网搜索优先使用千问 provider 的 `enable_search`，当前进入 Stage 5。
 - Web UI 优化参考国内版千问，不直接复制商标、官方图形资源或未实现能力入口。
 - 图片 MVP 存本地 uploads，调用模型时临时转 base64 data URL。
 - 可观测 MVP 只做 run trace、性能指标和 token usage，不做产品运营大盘。
@@ -61,10 +66,10 @@
 
 ## 下一步建议
 
-1. 创建 Stage 4 solution：联网搜索。
+1. 创建 Stage 5 solution：联网搜索。
 2. 明确 `search: auto | off | force` 的默认行为。
 3. 接入 Qwen `enable_search` / `search_options`。
-4. 按 Stage 3.5 的千问风格补充搜索入口、搜索状态和来源展示。
+4. 按当前千问风格和 MarkdownRenderer 补充搜索入口、搜索状态和来源展示。
 5. 增加 Debug 搜索配置记录。
 
 ## 阻塞项

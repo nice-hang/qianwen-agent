@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Stage 4: 联网搜索
+Stage 5: 联网搜索
 
 ## 已完成
 
@@ -43,10 +43,15 @@ Stage 4: 联网搜索
 - [x] Web 主聊天体验调整为浅色侧栏、中央内容列、底部圆角 composer 和千问风格消息展示
 - [x] 隐藏未实现能力入口，Debug 弱化为开发入口
 - [x] 采集 desktop、mobile、空会话和思考 composer 状态截图
+- [x] 完成 Stage 4 前端 Markdown 区块渲染优化
+- [x] 接入 `react-markdown` 和 `remark-gfm`
+- [x] Web assistant content 和 reasoningContent 均使用 MarkdownRenderer
+- [x] 支持标题、列表、引用、链接、表格、inline code 和 fenced code block 自定义渲染
+- [x] CodeBlock 支持语言标签、复制和横向滚动，TableBlock 支持外层横向滚动
 
 ## 进行中
 
-- [ ] 准备开始 Stage 4 联网搜索
+- [ ] 准备开始 Stage 5 联网搜索
 
 ## 未开始
 
@@ -64,8 +69,8 @@ Stage 4: 联网搜索
 
 ## 下一步
 
-1. 编写 Stage 4 联网搜索方案。
+1. 编写 Stage 5 联网搜索方案。
 2. 在请求协议中加入 `search: auto | off | force`。
 3. 调研并接入 Qwen `enable_search` / `search_options`。
-4. Web 按当前千问风格补充搜索入口、搜索状态和来源展示。
+4. Web 按当前 MarkdownRenderer 和千问风格补充搜索入口、搜索状态和来源展示。
 5. Debug 记录搜索配置与相关 usage。

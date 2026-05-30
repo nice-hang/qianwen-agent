@@ -112,7 +112,28 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [x] Desktop 和移动端 viewport 截图无明显布局错位
 - [x] 关键状态截图可用于后续视觉回归
 
-## Stage 4: 联网搜索
+## Stage 4: 前端 Markdown 区块渲染优化
+
+目标：把 assistant 的纯文本展示升级为 Markdown-first 的区块渲染，贴近真实 Chatbox 的内容呈现能力。
+
+- [x] 接入 React Markdown 渲染链路
+- [x] 支持 GFM：表格、删除线、task list 等
+- [x] 自定义标题、段落、列表、引用、分割线、链接样式
+- [x] 自定义 inline code 和 fenced code block 渲染
+- [x] CodeBlock 支持语言标签、复制、横向滚动和长代码不撑破布局
+- [x] TableBlock 支持外层横向滚动和移动端适配
+- [x] ThinkingBlock 内部也走 MarkdownRenderer
+- [x] 流式输出时未闭合 Markdown 也能保持可读
+
+验收：
+
+- [x] assistant 内容中的标题、列表、代码块、表格、链接能正确渲染
+- [x] reasoningContent 和 content 分别作为思考区和回答区渲染
+- [x] 代码块有语言标签和复制按钮
+- [x] 表格不会撑破消息列或移动端 viewport
+- [x] 不改 Qwen system prompt，不改消息存储结构
+
+## Stage 5: 联网搜索
 
 目标：优先使用千问 provider 内置搜索能力。
 
@@ -129,7 +150,7 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 搜索状态能在前端展示
 - [ ] 有来源时能展示来源数量和列表
 
-## Stage 5: 图片理解
+## Stage 6: 图片理解
 
 目标：打通本地图片上传和千问视觉理解链路。
 
@@ -149,7 +170,7 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 模型能基于图片回答
 - [ ] 历史消息能恢复图片展示
 
-## Stage 6: 轻量记忆
+## Stage 7: 轻量记忆
 
 目标：实现显式长期记忆。
 
@@ -165,7 +186,7 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 新会话能使用已记忆内容
 - [ ] 用户能查看和删除记忆
 
-## Stage 7: React Native 移动端
+## Stage 8: React Native 移动端
 
 目标：在 Web 协议稳定后接入移动端。
 

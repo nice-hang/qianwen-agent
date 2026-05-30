@@ -21,10 +21,11 @@
 0003-run-trace-debug-observability.md
 0004-deep-thinking.md
 0005-web-ui-qianwen-style.md
-0006-web-search.md
-0007-image-understanding.md
-0008-lightweight-memory.md
-0009-react-native-client.md
+0006-markdown-block-rendering.md
+0007-web-search.md
+0008-image-understanding.md
+0009-lightweight-memory.md
+0010-react-native-client.md
 ```
 
 ## 与其他目录的区别

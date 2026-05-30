@@ -1,5 +1,6 @@
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { ChatMessage, Conversation } from "@qianwen-agent/shared";
+import { MarkdownRenderer } from "./markdown/MarkdownRenderer";
 import "./ChatView.css";
 
 interface ChatViewProps {
@@ -87,14 +88,43 @@ function MessageBubble(props: { message: ChatMessage }) {
   return (
     <article className={`bubble ${message.role}`}>
       {message.reasoningContent ? (
-        <div className="thinking-block">
-          <strong>深度思考已完成</strong>
-          <p>{message.reasoningContent}</p>
+        <ThinkingBlock message={message} />
+      ) : null}
+      {message.content ? (
+        <MarkdownRenderer content={message.content} />
+      ) : (
+        <p>{message.status === "streaming" ? "正在生成..." : ""}</p>
+      )}
+    </article>
+  );
+}
+
+function ThinkingBlock(props: { message: ChatMessage }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isStreaming = props.message.status === "streaming";
+
+  return (
+    <div className="thinking-block">
+      <button
+        className="thinking-toggle"
+        type="button"
+        aria-expanded={isExpanded}
+        onClick={() => setIsExpanded((value) => !value)}
+      >
+        <span>{isStreaming ? "正在深度思考" : "深度思考已完成"}</span>
+        <span
+          className={isExpanded ? "thinking-chevron expanded" : "thinking-chevron"}
+          aria-hidden="true"
+        >
+          {isExpanded ? "⌄" : "›"}
+        </span>
+      </button>
+
+      {isExpanded ? (
+        <div className="thinking-content">
+          <MarkdownRenderer content={props.message.reasoningContent ?? ""} />
         </div>
       ) : null}
-      <p>
-        {message.content || (message.status === "streaming" ? "正在生成..." : "")}
-      </p>
-    </article>
+    </div>
   );
 }
