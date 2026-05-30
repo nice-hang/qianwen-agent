@@ -21,6 +21,9 @@
 - 已用真实 Qwen stream 验证 `stream_options.include_usage`，`done` event 和 `model_usages` 都能拿到 token usage。
 - Stage 3 已完成：Web 支持 Fast / Deep 模式切换，Server / Agent Runtime 支持 `enable_thinking` 和 `thinking_budget`。
 - 已用真实 Qwen deep stream 验证 `reasoning_delta`、`answer_delta`、TTFR、reasoning tokens 和刷新后恢复 `reasoningContent`。
+- Stage 3.5 已完成：参考国内版千问 `https://www.qianwen.com/` 登录态界面优化当前 Web UI。
+- Stage 3.5 已隐藏未实现能力入口，只展示当前真实可用能力。
+- Stage 3.5 已采集参考截图和本地 desktop/mobile、空会话、思考 composer 状态截图。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -37,6 +40,7 @@
 - 深度思考优先使用千问 provider 的 `enable_thinking`。
 - 深度思考内容保存到 assistant message 的 `reasoningContent`，不单独建 thinking 表。
 - 联网搜索优先使用千问 provider 的 `enable_search`。
+- Web UI 优化参考国内版千问，不直接复制商标、官方图形资源或未实现能力入口。
 - 图片 MVP 存本地 uploads，调用模型时临时转 base64 data URL。
 - 可观测 MVP 只做 run trace、性能指标和 token usage，不做产品运营大盘。
 
@@ -60,7 +64,8 @@
 1. 创建 Stage 4 solution：联网搜索。
 2. 明确 `search: auto | off | force` 的默认行为。
 3. 接入 Qwen `enable_search` / `search_options`。
-4. 增加搜索状态事件、来源展示和 Debug 搜索配置记录。
+4. 按 Stage 3.5 的千问风格补充搜索入口、搜索状态和来源展示。
+5. 增加 Debug 搜索配置记录。
 
 ## 阻塞项
 

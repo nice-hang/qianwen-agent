@@ -4,6 +4,7 @@ import type {
   ModelUsage
 } from "@qianwen-agent/shared";
 import { formatTime } from "../utils";
+import "./DebugView.css";
 
 interface DebugViewProps {
   activeRunId?: string;

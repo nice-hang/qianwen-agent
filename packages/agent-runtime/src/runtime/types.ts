@@ -11,5 +11,4 @@ export interface AgentRunInput {
   conversationId: string;
   messages: ChatMessage[];
   mode?: "fast" | "deep";
-  thinkingBudget?: number;
 }

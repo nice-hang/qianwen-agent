@@ -36,7 +36,6 @@ export interface ChatStreamRequest {
   conversationId?: string;
   message: string;
   mode?: "fast" | "deep";
-  thinkingBudget?: number;
 }
 
 export interface AgentRunSummary {

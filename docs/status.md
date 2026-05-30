@@ -38,6 +38,11 @@ Stage 4: 联网搜索
 - [x] Server 保存 assistant `reasoningContent`
 - [x] Debug 记录并展示 TTFR 和 reasoning tokens
 - [x] Web 支持 Fast / Deep 模式切换和思考内容展示
+- [x] 完成 Stage 3.5 Web UI 千问风格优化
+- [x] 使用用户本机登录态采集国内版千问参考截图
+- [x] Web 主聊天体验调整为浅色侧栏、中央内容列、底部圆角 composer 和千问风格消息展示
+- [x] 隐藏未实现能力入口，Debug 弱化为开发入口
+- [x] 采集 desktop、mobile、空会话和思考 composer 状态截图
 
 ## 进行中
 
@@ -62,4 +67,5 @@ Stage 4: 联网搜索
 1. 编写 Stage 4 联网搜索方案。
 2. 在请求协议中加入 `search: auto | off | force`。
 3. 调研并接入 Qwen `enable_search` / `search_options`。
-4. Web 展示搜索状态和来源，Debug 记录搜索配置与相关 usage。
+4. Web 按当前千问风格补充搜索入口、搜索状态和来源展示。
+5. Debug 记录搜索配置与相关 usage。

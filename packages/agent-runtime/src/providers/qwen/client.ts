@@ -2,6 +2,8 @@ import type { ProviderMessage } from "../../context/provider-messages";
 import { parseOpenAiCompatibleChunks } from "./stream-parser";
 import type { QwenTextStreamEvent } from "./types";
 
+const DEFAULT_THINKING_BUDGET = 500;
+
 export async function* streamQwenText(
   messages: ProviderMessage[],
   options: {
@@ -9,7 +11,6 @@ export async function* streamQwenText(
     baseUrl: string;
     model: string;
     mode: "fast" | "deep";
-    thinkingBudget?: number;
     fetchImpl: typeof fetch;
   }
 ): AsyncIterable<QwenTextStreamEvent> {
@@ -32,8 +33,8 @@ export async function* streamQwenText(
         stream: true,
         stream_options: { include_usage: true },
         enable_thinking: options.mode === "deep",
-        ...(options.mode === "deep" && options.thinkingBudget
-          ? { thinking_budget: options.thinkingBudget }
+        ...(options.mode === "deep"
+          ? { thinking_budget: DEFAULT_THINKING_BUDGET }
           : {})
       })
     }

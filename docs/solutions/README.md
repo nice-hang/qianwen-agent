@@ -20,10 +20,11 @@
 0002-minimal-chat-stream.md
 0003-run-trace-debug-observability.md
 0004-deep-thinking.md
-0005-web-search.md
-0006-image-understanding.md
-0007-lightweight-memory.md
-0008-react-native-client.md
+0005-web-ui-qianwen-style.md
+0006-web-search.md
+0007-image-understanding.md
+0008-lightweight-memory.md
+0009-react-native-client.md
 ```
 
 ## 与其他目录的区别
@@ -33,4 +34,3 @@
 - `docs/status.md`：记录当前实现状态。
 - `docs/handoff.md`：记录跨轮次交接。
 - `docs/solutions/`：记录每个 step 的技术方案、实现过程和最终留存。
-

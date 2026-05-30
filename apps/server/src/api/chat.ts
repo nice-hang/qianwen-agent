@@ -103,23 +103,20 @@ export function registerChatRoutes(
 
       const messages = await options.conversations.listMessages(conversation.id);
       const mode = request.body.mode === "deep" ? "deep" : "fast";
-      const thinkingBudget = normalizeThinkingBudget(request.body.thinkingBudget);
       const reasoningParts: string[] = [];
       const assistantParts: string[] = [];
       let assistantMessage: ChatMessage | null = null;
 
       providerStartedMs = Date.now();
       await recordTrace("provider_request_started", {
-        mode,
-        thinkingBudget
+        mode
       });
 
       // Agent 返回异步事件流；每个事件都会原样转发给前端。
       for await (const event of options.runAgent({
         conversationId: conversation.id,
         messages,
-        mode,
-        thinkingBudget
+        mode
       })) {
         if (event.type === "reasoning_delta") {
           if (firstReasoningMs === undefined) {
@@ -251,9 +248,4 @@ function normalizeConversationTitle(title: string): string {
 
   if (!normalized) return "New chat";
   return normalized.length > 40 ? `${normalized.slice(0, 40)}...` : normalized;
-}
-
-function normalizeThinkingBudget(value: number | undefined): number | undefined {
-  if (!value || !Number.isFinite(value)) return undefined;
-  return Math.max(1, Math.floor(value));
 }

@@ -11,6 +11,7 @@ import {
 import { ChatView } from "./components/ChatView";
 import { DebugView } from "./components/DebugView";
 import { readError } from "./utils";
+import "./App.css";
 
 const api = createApiClient({
   baseUrl: import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:3001"
@@ -27,7 +28,6 @@ export function App() {
   const [runUsage, setRunUsage] = useState<ModelUsage>();
   const [draft, setDraft] = useState("");
   const [mode, setMode] = useState<"fast" | "deep">("fast");
-  const [thinkingBudget, setThinkingBudget] = useState(500);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -155,8 +155,7 @@ export function App() {
     for await (const streamEvent of api.streamChat({
       conversationId: activeConversationId,
       message: text,
-      mode,
-      thinkingBudget: mode === "deep" ? thinkingBudget : undefined
+      mode
     })) {
       await applyStreamEvent(streamEvent, optimistic, state);
     }
@@ -273,30 +272,21 @@ export function App() {
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <div className="brand">
-          <span>Qianwen</span>
-          <strong>Chatbox</strong>
-        </div>
-        <button className="new-chat" type="button" onClick={startNewChat}>
-          New chat
-        </button>
-        <div className="view-switch">
+        <div className="sidebar-top">
           <button
-            className={view === "chat" ? "active" : undefined}
+            className="brand"
             type="button"
             onClick={() => setView("chat")}
+            aria-label="Back to chat"
           >
-            Chat
-          </button>
-          <button
-            className={view === "debug" ? "active" : undefined}
-            type="button"
-            onClick={() => setView("debug")}
-          >
-            Debug
+            千问
           </button>
         </div>
+        <button className="new-chat" type="button" onClick={startNewChat}>
+          新建对话
+        </button>
         <nav className="conversation-list" aria-label="Conversations">
+          <span className="nav-label">最近对话</span>
           {conversations.map((conversation) => (
             <button
               className={
@@ -310,6 +300,16 @@ export function App() {
             </button>
           ))}
         </nav>
+        <div className="sidebar-footer">
+          <button
+            className={view === "debug" ? "debug-link active" : "debug-link"}
+            type="button"
+            onClick={() => setView(view === "debug" ? "chat" : "debug")}
+          >
+            Run Trace
+          </button>
+          <span>Qianwen Agent</span>
+        </div>
       </aside>
 
       {view === "chat" ? (
@@ -323,8 +323,6 @@ export function App() {
           onDraftChange={setDraft}
           onModeChange={setMode}
           onSubmit={handleSubmit}
-          onThinkingBudgetChange={setThinkingBudget}
-          thinkingBudget={thinkingBudget}
         />
       ) : (
         <DebugView

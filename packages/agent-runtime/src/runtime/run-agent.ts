@@ -17,7 +17,6 @@ export async function* runAgent(
     baseUrl: env.QWEN_BASE_URL ?? DEFAULT_QWEN_BASE_URL,
     model: env.QWEN_MODEL ?? DEFAULT_QWEN_MODEL,
     mode: input.mode ?? "fast",
-    thinkingBudget: normalizeThinkingBudget(input.thinkingBudget),
     fetchImpl: options.fetchImpl ?? fetch
   })) {
     if (event.type === "usage") {
@@ -38,9 +37,4 @@ export async function* runAgent(
     runId: crypto.randomUUID(),
     usage
   };
-}
-
-function normalizeThinkingBudget(value: number | undefined): number | undefined {
-  if (!value || !Number.isFinite(value)) return undefined;
-  return Math.max(1, Math.floor(value));
 }

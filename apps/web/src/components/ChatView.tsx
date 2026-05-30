@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import type { ChatMessage, Conversation } from "@qianwen-agent/shared";
+import "./ChatView.css";
 
 interface ChatViewProps {
   activeConversation?: Conversation;
@@ -11,29 +12,25 @@ interface ChatViewProps {
   onDraftChange: (draft: string) => void;
   onModeChange: (mode: "fast" | "deep") => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onThinkingBudgetChange: (budget: number) => void;
-  thinkingBudget: number;
 }
 
 export function ChatView(props: ChatViewProps) {
+  const isEmpty = props.messages.length === 0;
+
   return (
-    <section className="chat-panel">
+    <section className={isEmpty ? "chat-panel empty" : "chat-panel"}>
       <header className="chat-header">
-        <div>
-          <p>Stage 2</p>
-          <h1>{props.activeConversation?.title ?? "New chat"}</h1>
-        </div>
-        <span>{props.isSending ? "Streaming" : "Ready"}</span>
+        <div className="model-select">Qwen3.6 - 千问</div>
+        <span className={props.isSending ? "status streaming" : "status"}>
+          {props.isSending ? "正在回答" : "就绪"}
+        </span>
       </header>
 
       <div className="messages" aria-live="polite">
         {props.messages.length === 0 ? (
           <div className="empty-state">
-            <h2>Ask something to start a conversation.</h2>
-            <p>
-              Text chat, streaming output, local history, and run trace are
-              wired end to end.
-            </p>
+            <h1>有什么可以帮忙的？</h1>
+            <p>支持多轮对话、流式回答和深度思考。</p>
           </div>
         ) : (
           props.messages.map((message) => (
@@ -45,47 +42,40 @@ export function ChatView(props: ChatViewProps) {
       {props.error ? <div className="error">{props.error}</div> : null}
 
       <form className="composer" onSubmit={props.onSubmit}>
-        <div className="composer-controls">
-          <div className="mode-switch" aria-label="Chat mode">
-            <button
-              className={props.mode === "fast" ? "active" : undefined}
-              type="button"
-              onClick={() => props.onModeChange("fast")}
-            >
-              Fast
-            </button>
-            <button
-              className={props.mode === "deep" ? "active" : undefined}
-              type="button"
-              onClick={() => props.onModeChange("deep")}
-            >
-              Deep
-            </button>
-          </div>
-          {props.mode === "deep" ? (
-            <label className="thinking-budget">
-              <span>Budget</span>
-              <input
-                min={1}
-                step={50}
-                type="number"
-                value={props.thinkingBudget}
-                onChange={(event) =>
-                  props.onThinkingBudgetChange(Number(event.target.value))
-                }
-              />
-            </label>
-          ) : null}
-        </div>
         <textarea
           value={props.draft}
           onChange={(event) => props.onDraftChange(event.target.value)}
-          placeholder="Message Qianwen Agent"
+          placeholder="向千问提问"
           rows={3}
         />
-        <button type="submit" disabled={props.isSending || !props.draft.trim()}>
-          Send
-        </button>
+        <div className="composer-footer">
+          <div className="composer-controls">
+            <div className="mode-switch" aria-label="Chat mode">
+              <button
+                className={props.mode === "fast" ? "active" : undefined}
+                type="button"
+                onClick={() => props.onModeChange("fast")}
+              >
+                快速
+              </button>
+              <button
+                className={props.mode === "deep" ? "active" : undefined}
+                type="button"
+                onClick={() => props.onModeChange("deep")}
+              >
+                思考
+              </button>
+            </div>
+          </div>
+          <button
+            className="send-button"
+            type="submit"
+            disabled={props.isSending || !props.draft.trim()}
+            aria-label="Send message"
+          >
+            ↑
+          </button>
+        </div>
       </form>
     </section>
   );
@@ -96,14 +86,15 @@ function MessageBubble(props: { message: ChatMessage }) {
 
   return (
     <article className={`bubble ${message.role}`}>
-      <span>{message.role}</span>
       {message.reasoningContent ? (
         <div className="thinking-block">
-          <strong>Thinking</strong>
+          <strong>深度思考已完成</strong>
           <p>{message.reasoningContent}</p>
         </div>
       ) : null}
-      <p>{message.content || (message.status === "streaming" ? "..." : "")}</p>
+      <p>
+        {message.content || (message.status === "streaming" ? "正在生成..." : "")}
+      </p>
     </article>
   );
 }
