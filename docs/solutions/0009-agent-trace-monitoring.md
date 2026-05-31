@@ -2,7 +2,7 @@
 
 ## 状态
 
-Planned
+Implemented
 
 ## 对应 Roadmap
 
@@ -143,14 +143,14 @@ Debug
 
 ## 实现计划
 
-- [ ] 基于 Stage 6 的 `provider_request` / `provider_response` 事件落库。
-- [ ] 扩展 trace mapper，让 Debug API 返回 provider requests、responses、tool events 的结构化列表。
-- [ ] Debug Run Detail 增加 Request List。
-- [ ] 增加 messages/tools/raw JSON 详情面板。
-- [ ] 增加工具调用详情和耗时展示。
-- [ ] 增加相邻 provider request 的简单 diff。
-- [ ] 用 mock 搜索 run 验证：request1 -> web_search -> request2 -> final answer。
-- [ ] 跑 `pnpm --filter @qianwen-agent/server typecheck`、`pnpm --filter @qianwen-agent/web typecheck` 和 `pnpm typecheck`。
+- [x] 基于 Stage 6 的 `provider_request` / `provider_response` 事件落库。
+- [x] 复用现有 Debug API 返回 provider requests、responses、tool events 的 raw payload。
+- [x] Debug Run Detail 增加 Request List。
+- [x] 增加 messages/tools/raw JSON 详情面板。
+- [x] 增加工具调用详情和耗时展示。
+- [x] 增加相邻 provider request 的简单 diff。
+- [ ] 用真实搜索 run 验证：request1 -> web_search -> request2 -> final answer。
+- [x] 跑 `pnpm --filter @qianwen-agent/server typecheck`、`pnpm --filter @qianwen-agent/web typecheck` 和 `pnpm typecheck`。
 
 ## 待确认问题
 
@@ -160,4 +160,10 @@ Debug
 
 ## 最终结论
 
-待实现后更新。
+Stage 7 第一版已完成。当前 Debug Run Detail 会从 `agent_events` 的 raw payload 中组装 Agent Trace：Provider Requests 显示每轮 model/mode/messages/tools/response duration/finish reason，并可展开查看 Messages、Tools、Diff 和 Raw JSON；Tool Calls 会按 `tool_call_started` / `tool_call_done` 配对，展示 input、output 和耗时。
+
+## 验证记录
+
+- `/Users/bytedance/.nvm/versions/node/v22.19.0/bin/pnpm --filter @qianwen-agent/web typecheck` 通过。
+- `/Users/bytedance/.nvm/versions/node/v22.19.0/bin/pnpm --filter @qianwen-agent/server typecheck` 通过。
+- `/Users/bytedance/.nvm/versions/node/v22.19.0/bin/pnpm typecheck` 通过。

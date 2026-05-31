@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-准备进入 Stage 7：Agent Trace 监控。
+准备完成 Stage 7 验证并进入 Stage 8：会话摘要。
 
 ## 当前状态
 
@@ -35,6 +35,7 @@
 - Stage 6 已完成：`runAgent` 已直接切换为 callback 版本，旧 async iterable 入口已删除；Server 改为通过 `onEvent` 接收 runtime 事件。
 - Stage 6 已新增极简 tool register，`web_search` / `web_fetch` 在工具侧声明 definition、execute、summarize 和 toEvents。
 - Stage 6 已新增 `provider_request` / `provider_response` debug 事件，Server 只落 trace，不转发给主聊天 Web。
+- Stage 7 Agent Trace Viewer 第一版已实现：Debug Run Detail 可查看 provider request messages/tools/diff/raw JSON，以及工具调用 input/output/耗时。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -81,8 +82,8 @@
 
 ## 下一步建议
 
-1. 实现 `docs/solutions/0009-agent-trace-monitoring.md`，把 Debug 升级为 Agent Trace Viewer。
-2. 基于 Stage 6 已落库的 `provider_request` / `provider_response` 展示每轮 messages/tools 和工具调用前后。
+1. 用真实搜索 run 验证 Agent Trace Viewer 的 request1 -> tool call -> request2 -> final answer 链路。
+2. 校准真实搜索行为和 Tavily 中文搜索质量。
 3. Stage 8 做同一会话摘要，Stage 9 做 RN，Stage 10 再做图片理解。
 
 ## 阻塞项

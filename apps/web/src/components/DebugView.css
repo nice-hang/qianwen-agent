@@ -129,6 +129,160 @@
   color: #666666;
 }
 
+.agent-trace {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.trace-section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trace-section-title span {
+  color: #202124;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.trace-section-title small {
+  color: #777773;
+}
+
+.trace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.trace-column {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.trace-column h3 {
+  margin: 0;
+  color: #777773;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.trace-request,
+.trace-tool {
+  min-width: 0;
+  border: 1px solid #e6e6e2;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.trace-card-head,
+.trace-metadata {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.trace-card-head {
+  justify-content: space-between;
+}
+
+.trace-card-head strong,
+.trace-card-head span,
+.trace-card-head small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-card-head strong {
+  color: #202124;
+  font-size: 14px;
+}
+
+.trace-card-head span,
+.trace-card-head small,
+.trace-metadata span {
+  color: #777773;
+  font-size: 12px;
+}
+
+.trace-metadata {
+  margin: 8px 0 10px;
+}
+
+.trace-metadata span {
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #f5f5f2;
+}
+
+.trace-details {
+  border-top: 1px solid #eeeeea;
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.trace-details summary {
+  color: #202124;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.message-inspector {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.inspector-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(72px, 120px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.inspector-row span {
+  color: #777773;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.inspector-row pre,
+.json-block {
+  min-width: 0;
+  max-height: 320px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  border-radius: 6px;
+  background: #f7f7f5;
+  color: #202124;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.json-block {
+  margin-top: 8px;
+}
+
+.trace-empty {
+  margin: 8px 0 0;
+  color: #777773;
+  font-size: 13px;
+}
+
 .timeline {
   list-style: none;
   margin: 0;
@@ -201,7 +355,12 @@
 
   .debug-layout,
   .metrics,
+  .trace-grid,
   .timeline li {
+    grid-template-columns: 1fr;
+  }
+
+  .inspector-row {
     grid-template-columns: 1fr;
   }
 

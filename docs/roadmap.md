@@ -192,17 +192,17 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 记录 tool call 前的名称、参数、来源 provider message
 - [ ] 记录 tool call 后的结果摘要、耗时、错误状态
 - [ ] 记录工具结果进入下一轮模型请求前的 provider messages 变化
-- [ ] Debug 页面升级为 Agent Trace Viewer：run 列表、请求列表、messages/tools/detail 面板
-- [ ] 支持相邻 provider request 的简单 diff，优先看 messages/tools 增量
+- [x] Debug 页面升级为 Agent Trace Viewer：run 列表、请求列表、messages/tools/detail 面板
+- [x] 支持相邻 provider request 的简单 diff，优先看 messages/tools 增量
 - [ ] 对 API key、Authorization 等敏感信息做脱敏，不记录原始 provider key
 
 验收：
 
-- [ ] 任意一次聊天 run 都能看到完整执行链路
+- [x] 任意一次聊天 run 都能看到完整执行链路
 - [ ] 搜索问题能看到 first model request、tool call、tool result、second model request、final answer
-- [ ] 能展开查看每轮 provider request 的 messages 和 tools
-- [ ] 能看到工具调用前后状态和耗时
-- [ ] 监控只作为本地调试能力，不影响主聊天体验
+- [x] 能展开查看每轮 provider request 的 messages 和 tools
+- [x] 能看到工具调用前后状态和耗时
+- [x] 监控只作为本地调试能力，不影响主聊天体验
 
 ## Stage 8: 会话摘要
 
