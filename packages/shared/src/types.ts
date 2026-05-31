@@ -24,6 +24,23 @@ export interface Conversation {
 
 export type AgentEvent =
   | {
+      type: "provider_request";
+      requestId: string;
+      iteration: number;
+      model: string;
+      mode: "fast" | "deep";
+      messages: unknown[];
+      tools: unknown[];
+    }
+  | {
+      type: "provider_response";
+      requestId: string;
+      iteration: number;
+      finishReason?: string;
+      usage?: TokenUsage;
+      durationMs: number;
+    }
+  | {
       type: "tool_call_started";
       toolName: string;
       toolCallId: string;

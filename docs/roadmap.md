@@ -162,24 +162,49 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 
 目标：在继续叠加新能力前，先收敛 Stage 5 的 agent loop 实现边界，让 Agent 内部闭环更清晰，Server/Web 只接收稳定回调事件。
 
-- [ ] 将 `runAgent` 从直接暴露大量 `yield` 的生成器风格，收敛为内部 loop + callbacks 的运行方式
-- [ ] 保持 public API 对 Server 尽量稳定，必要时只做一层兼容包装
-- [ ] Server 不再依赖 Agent loop 内部循环细节，只处理 `onEvent` / `onDelta` / `onDone` 等稳定输出
-- [ ] 减少 runtime 内部分散 `yield`，统一由一个 emit 边界输出 shared `AgentEvent`
-- [ ] 增加极简 `tool register`，参考 pi-mono 的注册表思想，但不引入插件系统、class 或复杂生命周期
-- [ ] `web_search` / `web_fetch` 通过 register 暴露 definition 与 execute
-- [ ] 明确未知工具、工具参数解析、工具结果摘要、搜索 sources 提取的单一位置
-- [ ] 更新 Debug/trace 仍能记录工具事件
+- [x] 参考 `pi-mono/packages/agent` 的设计，只吸收 emit 边界、context transform、tool prepare/execute/finalize 等当前需要的部分
+- [x] 不引入 `Agent` class、turn、steering、followUp、parallel tool execution 等当前不需要的概念
+- [x] 将 `runAgent` 从 `AsyncIterable` 生成器改为 callback 版本，旧生成器入口直接删除
+- [x] Server 不再依赖 Agent loop 内部循环细节，只处理稳定 `onEvent` 输出
+- [x] 减少 runtime 内部分散 `yield`，统一由一个 emit 边界输出 shared `AgentEvent`
+- [x] 增加极简 `tool register`，参考 pi-mono 的注册表思想，但不引入插件系统、class 或复杂生命周期
+- [x] `web_search` / `web_fetch` 通过 register 暴露 definition 与 execute
+- [x] 将工具调用整理为 prepare / execute / finalize 三步，明确未知工具、参数解析、结果摘要、搜索 sources 提取的单一位置
+- [x] Provider 请求前统一生成可观测快照：本轮 messages、tools、model、mode
+- [x] 更新 Debug/trace 仍能记录工具事件
 
 验收：
 
 - [ ] 现有聊天、深度思考、搜索来源展示行为不变
-- [ ] `apps/server` 不需要理解 tool iteration、provider tool call delta 聚合等 runtime 内部细节
-- [ ] `agent-runtime` 内部工具注册/查找/执行路径清晰，新增一个工具只需改一处注册表
-- [ ] 工具事件、搜索 sources、最终 `done` 仍完整到达 Server 和 Web
-- [ ] `pnpm --filter @qianwen-agent/agent-runtime typecheck` 和 `pnpm typecheck` 通过
+- [x] `apps/server` 不需要理解 tool iteration、provider tool call delta 聚合等 runtime 内部细节
+- [x] `agent-runtime` 内部工具注册/查找/执行路径清晰，新增一个工具只需改一处注册表
+- [x] 工具事件、搜索 sources、最终 `done` 仍完整到达 Server 和 Web
+- [x] trace 中能拿到每次 provider 请求的 messages 和 tools 快照
+- [x] `pnpm --filter @qianwen-agent/agent-runtime typecheck` 和 `pnpm typecheck` 通过
 
-## Stage 7: 会话摘要
+## Stage 7: Agent Trace 监控
+
+目标：在 Stage 6 收敛 runtime 边界后，补一个类似 `claude-tap` 的本地 Agent 执行监控视图，能看到一次对话的完整模型请求、工具调用和响应过程。
+
+- [ ] 设计 trace 数据结构，记录每轮 provider request / response / stream summary
+- [ ] 记录每轮传给模型的 `messages`
+- [ ] 记录每轮传给模型的 `tools`
+- [ ] 记录 tool call 前的名称、参数、来源 provider message
+- [ ] 记录 tool call 后的结果摘要、耗时、错误状态
+- [ ] 记录工具结果进入下一轮模型请求前的 provider messages 变化
+- [ ] Debug 页面升级为 Agent Trace Viewer：run 列表、请求列表、messages/tools/detail 面板
+- [ ] 支持相邻 provider request 的简单 diff，优先看 messages/tools 增量
+- [ ] 对 API key、Authorization 等敏感信息做脱敏，不记录原始 provider key
+
+验收：
+
+- [ ] 任意一次聊天 run 都能看到完整执行链路
+- [ ] 搜索问题能看到 first model request、tool call、tool result、second model request、final answer
+- [ ] 能展开查看每轮 provider request 的 messages 和 tools
+- [ ] 能看到工具调用前后状态和耗时
+- [ ] 监控只作为本地调试能力，不影响主聊天体验
+
+## Stage 8: 会话摘要
 
 目标：先做同一会话内的轻量摘要，降低长对话上下文压力；暂不做跨会话长期记忆。
 
@@ -197,7 +222,7 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 摘要失败不影响主回答链路
 - [ ] 不建立 `memories` 表，不实现 `memory_write` / `memory_delete`
 
-## Stage 8: React Native 移动端
+## Stage 9: React Native 移动端
 
 目标：在 Web 协议稳定后接入移动端。
 
@@ -216,7 +241,7 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 移动端能展示深度思考
 - [ ] 移动端能展示搜索来源
 
-## Stage 9: 图片理解
+## Stage 10: 图片理解
 
 目标：在 Web、Server、Agent Runtime 和 RN 基础链路稳定后，再打通本地图片上传和千问视觉理解链路。
 

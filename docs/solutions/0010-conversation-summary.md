@@ -6,7 +6,7 @@ Planned
 
 ## 对应 Roadmap
 
-- Stage: Stage 7
+- Stage: Stage 8
 - Step: Conversation Summary
 - 相关验收项:
   - 长会话刷新后仍能使用已有摘要构造上下文
@@ -22,7 +22,7 @@ Planned
 - 用户通常更关心当前会话内的连续上下文，而不是跨会话偏好记忆。
 - 摘要可以复用现有 `conversations.summary`，不需要新增 `memories` 表和记忆管理 UI。
 
-因此 Stage 7 只做 conversation summary，不做显式长期记忆。
+因此 Stage 8 只做 conversation summary，不做显式长期记忆。
 
 ## 目标
 

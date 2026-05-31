@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Stage 6: Agent Runtime 简化与 Tool Register 规划
+Stage 7: Agent Trace 监控规划
 
 ## 已完成
 
@@ -52,16 +52,21 @@ Stage 6: Agent Runtime 简化与 Tool Register 规划
 - [x] Qwen provider 支持 tool calling stream
 - [x] 接入 `web_search` / `web_fetch` 内置工具和 sources 持久化
 - [x] Web 支持搜索状态、来源 chip 和右侧来源 drawer
+- [x] 完成 Stage 6 Agent Runtime 简化与 Tool Register
+- [x] `runAgent` 已切换为 callback 版本，旧 `AsyncIterable` 入口已删除
+- [x] 新增极简 tool register，`web_search` / `web_fetch` 通过 register 暴露 definition 与 execute
+- [x] Runtime 通过 `provider_request` / `provider_response` 输出每轮 messages/tools 快照供 trace 使用
 
 ## 进行中
 
-- [x] 已重新规划 Stage 6-9
-- [ ] Stage 6 待实现：Agent Runtime callback 边界 + 极简 tool register
+- [x] 已重新规划 Stage 6-10
+- [ ] Stage 7 待实现：Agent Trace 监控
 - [ ] 待真实 `TAVILY_API_KEY` 环境下校准模型是否按预期自动搜索
 
 ## 未开始
 
 - [ ] 真实联网搜索效果校准
+- [ ] Agent Trace 监控
 - [ ] 会话摘要
 - [ ] React Native 移动端
 - [ ] 图片理解
@@ -71,14 +76,15 @@ Stage 6: Agent Runtime 简化与 Tool Register 规划
 - RN 的 fetch streaming 兼容性需要实际验证。
 - Stage 5 已决定不优先走 Qwen OpenAI-compatible `enable_search` 作为产品主路径，因为其不稳定返回结构化 sources；先建设自建工具 loop。
 - 已用真实 Qwen deep stream 验证 `reasoning_content`、TTFR 和 reasoning tokens。
-- Stage 6 需要先简化当前 agent loop，实现 callback 输出边界和极简 tool register，避免后续 summary/RN/image 继续叠在分散 `yield` 上。
-- 轻量长期记忆暂缓；当前更优先做同一会话摘要，避免长会话上下文膨胀。
+- Stage 6 需要先简化当前 agent loop，实现 callback 输出边界和极简 tool register，避免后续 trace/summary/RN/image 继续叠在分散 `yield` 上。
+- Stage 7 需要把 Debug 升级成类似 claude-tap 的 Agent Trace 监控，能看到每轮 provider messages/tools 和工具调用前后。
+- 轻量长期记忆暂缓；会话摘要顺延到 Stage 8。
 - 本地图片上传转 base64 data URL 需要控制大小，避免超过 provider 限制，已顺延到 RN 之后。
 - 已用真实 `DASHSCOPE_API_KEY` 验证 Stage 1 Qwen OpenAI-compatible 流式调用；本地 `.env` 已被 gitignore。
 
 ## 下一步
 
 1. 实现 Stage 6：Agent Runtime callback 边界与极简 tool register。
-2. 在 Stage 6 后继续校准真实搜索行为：普通知识问题不搜索、时效问题会搜索。
-3. Stage 7 做同一会话摘要，暂不做跨会话长期记忆。
-4. Stage 8 接 RN，Stage 9 再做图片理解。
+2. Stage 7 做 Agent Trace 监控，展示每轮 messages/tools、工具调用前后和 request diff。
+3. 在 Stage 7 后继续校准真实搜索行为：普通知识问题不搜索、时效问题会搜索。
+4. Stage 8 做会话摘要，Stage 9 接 RN，Stage 10 再做图片理解。

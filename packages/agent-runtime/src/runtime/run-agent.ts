@@ -1,4 +1,4 @@
-import type { AgentEvent, TokenUsage } from "@qianwen-agent/shared";
+import type { AgentEvent, SearchSource, TokenUsage } from "@qianwen-agent/shared";
 import {
   buildProviderMessages,
   type ProviderMessage,
@@ -7,36 +7,63 @@ import {
 import { streamQwenText } from "../providers/qwen/client";
 import { DEFAULT_QWEN_BASE_URL, DEFAULT_QWEN_MODEL } from "../providers/qwen/constants";
 import type { QwenTextStreamEvent } from "../providers/qwen/types";
-import { builtInTools } from "../tools/built-ins";
-import type { BuiltInTool, WebSearchOutput } from "../tools/types";
+import { createBuiltInToolRegister } from "../tools/built-ins";
+import type { RuntimeTool, ToolContext } from "../tools/types";
 import { readProcessEnv } from "./env";
-import type { AgentRunInput, RunAgentOptions } from "./types";
+import type { AgentRunInput, AgentRunResult, RunAgentOptions } from "./types";
 
 const MAX_TOOL_ITERATIONS = 3;
 
-export async function* runAgent(
+export async function runAgent(
   input: AgentRunInput,
   options: RunAgentOptions = {}
-): AsyncIterable<AgentEvent> {
+): Promise<AgentRunResult> {
   const env = options.env ?? readProcessEnv();
   const fetchImpl = options.fetchImpl ?? fetch;
-  let usage: TokenUsage | undefined;
+  const emit = async (event: AgentEvent) => {
+    await options.onEvent?.(event);
+  };
+  const mode = input.mode ?? "fast";
+  const model = env.QWEN_MODEL ?? DEFAULT_QWEN_MODEL;
   const messages = buildProviderMessages(input.messages);
-  const toolDefinitions = Object.values(builtInTools).map((tool) => tool.definition);
+  const toolRegister = createBuiltInToolRegister();
+  const toolDefinitions = toolRegister.definitions();
+  const sources: SearchSource[] = [];
+  let usage: TokenUsage | undefined;
 
   for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
+    const requestId = crypto.randomUUID();
+    const requestStartedAt = Date.now();
     const toolCallParts = new Map<number, ToolCallParts>();
+    let finishReason: string | undefined;
+    let requestUsage: TokenUsage | undefined;
+
+    await emit({
+      type: "provider_request",
+      requestId,
+      iteration,
+      model,
+      mode,
+      messages: cloneJson(messages),
+      tools: cloneJson(toolDefinitions)
+    });
 
     for await (const event of streamQwenText(messages, {
       apiKey: env.QWEN_API_KEY ?? env.DASHSCOPE_API_KEY,
       baseUrl: env.QWEN_BASE_URL ?? DEFAULT_QWEN_BASE_URL,
-      model: env.QWEN_MODEL ?? DEFAULT_QWEN_MODEL,
-      mode: input.mode ?? "fast",
+      model,
+      mode,
       tools: toolDefinitions,
       fetchImpl
     })) {
       if (event.type === "usage") {
         usage = event.usage;
+        requestUsage = event.usage;
+        continue;
+      }
+
+      if (event.type === "finish") {
+        finishReason = event.reason;
         continue;
       }
 
@@ -45,26 +72,31 @@ export async function* runAgent(
         continue;
       }
 
-      if (event.type === "finish") {
-        continue;
-      }
-
       if (event.type === "reasoning") {
-        yield { type: "reasoning_delta", text: event.text };
+        await emit({ type: "reasoning_delta", text: event.text });
         continue;
       }
 
-      yield { type: "answer_delta", text: event.text };
+      await emit({ type: "answer_delta", text: event.text });
     }
+
+    await emit({
+      type: "provider_response",
+      requestId,
+      iteration,
+      finishReason,
+      usage: requestUsage,
+      durationMs: Date.now() - requestStartedAt
+    });
 
     const toolCalls = toProviderToolCalls(toolCallParts);
     if (toolCalls.length === 0) {
-      yield {
+      await emit({
         type: "done",
         runId: crypto.randomUUID(),
         usage
-      };
-      return;
+      });
+      return { usage, sources };
     }
 
     messages.push({
@@ -74,24 +106,35 @@ export async function* runAgent(
     });
 
     for (const toolCall of toolCalls) {
-      yield* executeToolCall(toolCall, messages, {
+      const result = await runToolCall(toolCall, messages, {
         env,
-        fetchImpl
+        fetchImpl,
+        toolRegister,
+        emit
       });
+      sources.push(...result.sources);
     }
   }
 
-  yield {
+  await emit({
     type: "error",
     message: "Agent stopped after reaching the tool iteration limit.",
     code: "tool_iteration_limit"
-  };
+  });
+  return { usage, sources };
 }
 
 interface ToolCallParts {
   id?: string;
   name?: string;
   arguments: string;
+}
+
+interface PreparedToolCall {
+  toolCall: ProviderToolCall;
+  toolName: string;
+  input: unknown;
+  tool?: RuntimeTool;
 }
 
 function mergeToolCallPart(
@@ -124,69 +167,86 @@ function toProviderToolCalls(calls: Map<number, ToolCallParts>): ProviderToolCal
     });
 }
 
-async function* executeToolCall(
+async function runToolCall(
   toolCall: ProviderToolCall,
   messages: ProviderMessage[],
-  context: {
-    env: Record<string, string | undefined>;
-    fetchImpl: typeof fetch;
+  context: ToolContext & {
+    toolRegister: ReturnType<typeof createBuiltInToolRegister>;
+    emit: (event: AgentEvent) => Promise<void>;
   }
-): AsyncIterable<AgentEvent> {
-  const toolName = toolCall.function.name;
-  const input = parseToolArguments(toolCall.function.arguments);
-  const tool = builtInTools[toolName as keyof typeof builtInTools] as
-    | BuiltInTool
-    | undefined;
+): Promise<{ sources: SearchSource[] }> {
+  const prepared = prepareToolCall(toolCall, context.toolRegister);
 
-  yield {
+  await context.emit({
     type: "tool_call_started",
-    toolName,
+    toolName: prepared.toolName,
     toolCallId: toolCall.id,
-    input
-  };
+    input: prepared.input
+  });
 
-  if (!tool) {
-    const output = { error: `Unknown tool: ${toolName}` };
-    messages.push(toToolResultMessage(toolCall.id, output));
-    yield {
-      type: "tool_call_done",
-      toolName,
-      toolCallId: toolCall.id,
-      output
+  const executed = await executePreparedToolCall(prepared, context);
+  messages.push(toToolResultMessage(toolCall.id, executed.output));
+  await finalizeToolCall(prepared, executed, context.emit);
+
+  return {
+    sources: extractSearchSources(executed.events)
+  };
+}
+
+function prepareToolCall(
+  toolCall: ProviderToolCall,
+  toolRegister: ReturnType<typeof createBuiltInToolRegister>
+): PreparedToolCall {
+  const toolName = toolCall.function.name;
+  return {
+    toolCall,
+    toolName,
+    input: parseToolArguments(toolCall.function.arguments),
+    tool: toolRegister.get(toolName)
+  };
+}
+
+async function executePreparedToolCall(
+  prepared: PreparedToolCall,
+  context: ToolContext
+): Promise<{ output: unknown; events: AgentEvent[] }> {
+  if (!prepared.tool) {
+    return {
+      output: { error: `Unknown tool: ${prepared.toolName}` },
+      events: []
     };
-    return;
   }
 
   try {
-    const output = await tool.execute(input, context);
-    messages.push(toToolResultMessage(toolCall.id, output));
-    yield {
-      type: "tool_call_done",
-      toolName,
-      toolCallId: toolCall.id,
-      output: summarizeToolOutput(output)
+    const output = await prepared.tool.execute(prepared.input, context);
+    return {
+      output,
+      events: prepared.tool.toEvents?.(output, prepared.toolCall) ?? []
     };
-
-    if (toolName === "web_search") {
-      const searchOutput = output as WebSearchOutput;
-      yield {
-        type: "search_results",
-        toolCallId: toolCall.id,
-        query: searchOutput.query,
-        sources: searchOutput.sources
-      };
-    }
   } catch (cause) {
-    const output = {
-      error: cause instanceof Error ? cause.message : "Tool execution failed."
+    return {
+      output: {
+        error: cause instanceof Error ? cause.message : "Tool execution failed."
+      },
+      events: []
     };
-    messages.push(toToolResultMessage(toolCall.id, output));
-    yield {
-      type: "tool_call_done",
-      toolName,
-      toolCallId: toolCall.id,
-      output
-    };
+  }
+}
+
+async function finalizeToolCall(
+  prepared: PreparedToolCall,
+  executed: { output: unknown; events: AgentEvent[] },
+  emit: (event: AgentEvent) => Promise<void>
+) {
+  await emit({
+    type: "tool_call_done",
+    toolName: prepared.toolName,
+    toolCallId: prepared.toolCall.id,
+    output: summarizeToolOutput(prepared.tool, executed.output)
+  });
+
+  for (const event of executed.events) {
+    await emit(event);
   }
 }
 
@@ -206,36 +266,16 @@ function toToolResultMessage(toolCallId: string, output: unknown): ProviderMessa
   };
 }
 
-function summarizeToolOutput(output: unknown): unknown {
-  if (
-    typeof output === "object" &&
-    output !== null &&
-    "text" in output &&
-    typeof output.text === "string"
-  ) {
-    return {
-      ...output,
-      text: output.text.slice(0, 1000)
-    };
-  }
-
-  if (isWebSearchOutput(output)) {
-    return {
-      query: output.query,
-      sourcesCount: output.sources.length,
-      sources: output.sources
-    };
-  }
-
-  return output;
+function summarizeToolOutput(tool: RuntimeTool | undefined, output: unknown): unknown {
+  return tool?.summarize ? tool.summarize(output) : output;
 }
 
-function isWebSearchOutput(output: unknown): output is WebSearchOutput {
-  return (
-    typeof output === "object" &&
-    output !== null &&
-    "query" in output &&
-    "sources" in output &&
-    Array.isArray((output as { sources?: unknown }).sources)
+function extractSearchSources(events: AgentEvent[]): SearchSource[] {
+  return events.flatMap((event) =>
+    event.type === "search_results" ? event.sources : []
   );
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }

@@ -33,6 +33,10 @@ export interface RunDetailResponse {
   usage?: ModelUsage;
 }
 
+export interface StreamChatOptions {
+  onEvent: (event: AgentEvent) => Promise<void> | void;
+}
+
 export function createApiClient(options: ApiClientOptions = {}) {
   const baseUrl = options.baseUrl ?? "";
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -74,7 +78,10 @@ export function createApiClient(options: ApiClientOptions = {}) {
       return response.json() as Promise<RunDetailResponse>;
     },
 
-    async *streamChat(request: ChatStreamRequest): AsyncIterable<AgentEvent> {
+    async streamChat(
+      request: ChatStreamRequest,
+      streamOptions: StreamChatOptions
+    ): Promise<void> {
       // POST stream 允许客户端发送 JSON，同时继续接收增量事件。
       const response = await fetchImpl(`${baseUrl}/api/chat/stream`, {
         method: "POST",
@@ -104,13 +111,13 @@ export function createApiClient(options: ApiClientOptions = {}) {
 
         for (const chunk of parseSseLikeStreamChunk(ready)) {
           const event = decodeAgentEvent(chunk);
-          if (event) yield event;
+          if (event) await streamOptions.onEvent(event);
         }
       }
 
       for (const chunk of parseSseLikeStreamChunk(buffer)) {
         const event = decodeAgentEvent(chunk);
-        if (event) yield event;
+        if (event) await streamOptions.onEvent(event);
       }
     }
   };

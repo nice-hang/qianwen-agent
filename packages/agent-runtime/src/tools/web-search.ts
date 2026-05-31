@@ -11,6 +11,7 @@ interface TavilySearchResponse {
 }
 
 export const webSearchTool: BuiltInTool<WebSearchOutput> = {
+  name: "web_search",
   definition: {
     type: "function",
     function: {
@@ -76,6 +77,24 @@ export const webSearchTool: BuiltInTool<WebSearchOutput> = {
         toSearchSource(result, index)
       )
     };
+  },
+  summarize(output) {
+    return {
+      query: output.query,
+      sourcesCount: output.sources.length,
+      sources: output.sources,
+      note: output.note
+    };
+  },
+  toEvents(output, toolCall) {
+    return [
+      {
+        type: "search_results",
+        toolCallId: toolCall.id,
+        query: output.query,
+        sources: output.sources
+      }
+    ];
   }
 };
 

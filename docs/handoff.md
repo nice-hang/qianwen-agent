@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-准备进入 Stage 6：Agent Runtime 简化与 Tool Register。
+准备进入 Stage 7：Agent Trace 监控。
 
 ## 当前状态
 
@@ -31,7 +31,10 @@
 - Stage 5 方案已确定：先做轻量 Agent Loop，再接自建 `web_search` / `web_fetch` 工具；不优先用 Qwen OpenAI-compatible `enable_search` 做产品主路径。
 - Stage 5 Agent Loop 基础改造已实现：Qwen tool-call stream、内置工具表、sources 持久化、Web 来源 chip / drawer 均已接入。
 - `web_search` 第一版使用 `TAVILY_API_KEY` 调 Tavily；未配置时返回空 sources 和明确 note，loop 仍可继续。
-- 后续阶段已重新规划：Stage 6 先做 Agent Runtime 简化与极简 tool register，Stage 7 做同一会话摘要，Stage 8 做 React Native，Stage 9 再做图片理解。
+- 后续阶段已重新规划：Stage 6 先做 Agent Runtime 简化与极简 tool register，Stage 7 做 Agent Trace 监控，Stage 8 做同一会话摘要，Stage 9 做 React Native，Stage 10 再做图片理解。
+- Stage 6 已完成：`runAgent` 已直接切换为 callback 版本，旧 async iterable 入口已删除；Server 改为通过 `onEvent` 接收 runtime 事件。
+- Stage 6 已新增极简 tool register，`web_search` / `web_fetch` 在工具侧声明 definition、execute、summarize 和 toEvents。
+- Stage 6 已新增 `provider_request` / `provider_response` debug 事件，Server 只落 trace，不转发给主聊天 Web。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -50,9 +53,9 @@
 - MarkdownRenderer 使用 Markdown 原生能力渲染标题、列表、代码块、表格、引用和链接。
 - Stage 5 不优先使用千问 provider 的 `enable_search` 作为产品主路径，因为 OpenAI-compatible Chat Completions 无法稳定返回结构化 sources。
 - 是否搜索由模型通过 tool calling 自主决定，不由前端传 search 开关，也不由 runtime 关键词规则决定。
-- Agent Loop 第一版已跑通，但 Stage 6 需要继续简化运行时边界：减少分散 `yield`，让 Agent 内部闭环，通过 callback 输出稳定 shared `AgentEvent`。
-- Tool register 参考 pi-mono 的注册表思想，但保持极简：不引入 Runtime class、LangGraph、MCP、插件系统或复杂生命周期。
-- 轻量长期记忆暂缓；下一步更优先做同一会话摘要，复用 `conversations.summary`，解决长会话上下文压力。
+- Agent Loop 参考 `/Users/bytedance/Documents/github/pi-mono/packages/agent` 的 emit/context/tool 执行设计，但只保留当前需要的 callback emit、极简 tool register、prepare/execute/finalize；不引入 Runtime class、turn、steering、followUp、LangGraph、MCP、插件系统或复杂生命周期。
+- Stage 7 做类似 claude-tap 的 Agent Trace 监控，重点能看到每轮 provider request 的 messages/tools、工具调用前后、相邻 request diff。
+- 轻量长期记忆暂缓；同一会话摘要顺延到 Stage 8，复用 `conversations.summary`，解决长会话上下文压力。
 - 图片理解后续走 multimodal input / provider message projection，不作为工具扩展示例，并顺延到 RN 之后。
 - 搜索来源第一版直接持久化到 assistant message 的 `sourcesJson`，不先建 `message_sources` 表。
 - Web UI 优化参考国内版千问，不直接复制商标、官方图形资源或未实现能力入口。
@@ -66,6 +69,7 @@
 3. `docs/roadmap.md`
 4. `docs/status.md`
 5. `docs/solutions/0008-runtime-callback-tool-register.md`
+6. `docs/solutions/0009-agent-trace-monitoring.md`
 
 需要追溯背景时再读：
 
@@ -77,10 +81,9 @@
 
 ## 下一步建议
 
-1. 实现 `docs/solutions/0008-runtime-callback-tool-register.md`：callback 版 `runAgent` + 极简 tool register。
-2. 保持现有聊天、深度思考、搜索来源展示行为不变，并跑 agent-runtime / 全仓 typecheck。
-3. Stage 6 完成后继续校准真实搜索行为和 Tavily 中文搜索质量。
-4. Stage 7 做同一会话摘要，Stage 8 做 RN，Stage 9 再做图片理解。
+1. 实现 `docs/solutions/0009-agent-trace-monitoring.md`，把 Debug 升级为 Agent Trace Viewer。
+2. 基于 Stage 6 已落库的 `provider_request` / `provider_response` 展示每轮 messages/tools 和工具调用前后。
+3. Stage 8 做同一会话摘要，Stage 9 做 RN，Stage 10 再做图片理解。
 
 ## 阻塞项
 

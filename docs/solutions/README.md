@@ -24,9 +24,10 @@
 0006-markdown-block-rendering.md
 0007-agent-loop-web-search.md
 0008-runtime-callback-tool-register.md
-0009-conversation-summary.md
-0010-react-native-client.md
-0011-image-understanding.md
+0009-agent-trace-monitoring.md
+0010-conversation-summary.md
+0011-react-native-client.md
+0012-image-understanding.md
 ```
 
 ## 与其他目录的区别

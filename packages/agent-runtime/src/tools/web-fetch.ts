@@ -3,6 +3,7 @@ import type { BuiltInTool, WebFetchOutput } from "./types";
 const MAX_FETCH_CHARS = 8000;
 
 export const webFetchTool: BuiltInTool<WebFetchOutput> = {
+  name: "web_fetch",
   definition: {
     type: "function",
     function: {
@@ -53,6 +54,12 @@ export const webFetchTool: BuiltInTool<WebFetchOutput> = {
       url,
       title,
       text: htmlToText(raw).slice(0, MAX_FETCH_CHARS)
+    };
+  },
+  summarize(output) {
+    return {
+      ...output,
+      text: output.text.slice(0, 1000)
     };
   }
 };

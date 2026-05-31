@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type {
+  AgentEvent,
   ChatMessage,
   ChatStreamRequest,
   SearchSource
@@ -92,37 +93,59 @@ export function registerChatRoutes(
         return reply;
       }
       activeConversationId = conversation.id;
+      const conversationId = conversation.id;
       await options.traces.updateRunConversation({
         runId: run.id,
-        conversationId: conversation.id
+        conversationId
       });
 
       // 先保存用户消息，这样即使模型失败，刷新后也能恢复这轮输入。
       await options.conversations.addMessage({
-        conversationId: conversation.id,
+        conversationId,
         role: "user",
         content: messageText
       });
-      await recordTrace("user_message_saved", { conversationId: conversation.id });
+      await recordTrace("user_message_saved", { conversationId });
 
-      const messages = await options.conversations.listMessages(conversation.id);
+      const messages = await options.conversations.listMessages(conversationId);
       const mode = request.body.mode === "deep" ? "deep" : "fast";
       const reasoningParts: string[] = [];
       const assistantParts: string[] = [];
       const searchSources: SearchSource[] = [];
       let assistantMessage: ChatMessage | null = null;
+      let terminalAgentError = false;
 
       providerStartedMs = Date.now();
       await recordTrace("provider_request_started", {
         mode
       });
 
-      // Agent 返回异步事件流；每个事件都会原样转发给前端。
-      for await (const event of options.runAgent({
-        conversationId: conversation.id,
-        messages,
-        mode
-      })) {
+      // Agent 内部闭环执行；Server 只处理稳定的 AgentEvent 回调。
+      await options.runAgent(
+        {
+          conversationId,
+          messages,
+          mode
+        },
+        {
+          onEvent: async (event) => {
+            await handleAgentEvent(event);
+          }
+        }
+      );
+
+      async function handleAgentEvent(event: AgentEvent) {
+        if (event.type === "provider_request") {
+          await recordTrace("provider_request", event);
+          return;
+        }
+
+        if (event.type === "provider_response") {
+          providerDoneMs = Date.now();
+          await recordTrace("provider_response", event);
+          return;
+        }
+
         if (event.type === "reasoning_delta") {
           if (firstReasoningMs === undefined) {
             firstReasoningMs = Date.now() - runStartedMs;
@@ -130,7 +153,7 @@ export function registerChatRoutes(
           }
           reasoningParts.push(event.text);
           writeAgentEvent(reply, event);
-          continue;
+          return;
         }
 
         if (event.type === "answer_delta") {
@@ -140,19 +163,19 @@ export function registerChatRoutes(
           }
           assistantParts.push(event.text);
           writeAgentEvent(reply, event);
-          continue;
+          return;
         }
 
         if (event.type === "tool_call_started") {
           await recordTrace("tool_call_started", event);
           writeAgentEvent(reply, event);
-          continue;
+          return;
         }
 
         if (event.type === "tool_call_done") {
           await recordTrace("tool_call_done", event);
           writeAgentEvent(reply, event);
-          continue;
+          return;
         }
 
         if (event.type === "search_results") {
@@ -164,7 +187,7 @@ export function registerChatRoutes(
           });
           searchSources.push(...event.sources);
           writeAgentEvent(reply, event);
-          continue;
+          return;
         }
 
         if (event.type === "done") {
@@ -175,14 +198,14 @@ export function registerChatRoutes(
             await options.traces.saveUsage({ runId: run.id, usage: event.usage });
           }
           assistantMessage = await options.conversations.addMessage({
-            conversationId: conversation.id,
+            conversationId,
             role: "assistant",
             content: assistantContent,
             reasoningContent: reasoningParts.join("") || undefined,
             sources: dedupeSources(searchSources),
             status: assistantContent ? "completed" : "failed"
           });
-          await options.conversations.touchConversation(conversation.id);
+          await options.conversations.touchConversation(conversationId);
           await recordTrace("assistant_message_saved", {
             messageId: assistantMessage.id
           });
@@ -203,25 +226,44 @@ export function registerChatRoutes(
             type: "done",
             runId: run.id,
             messageId: assistantMessage.id,
-            conversationId: conversation.id,
+            conversationId,
             usage: event.usage
           });
-          continue;
+          return;
+        }
+
+        if (event.type === "error") {
+          terminalAgentError = true;
+          await recordTrace("run_failed", event);
+          await options.traces.failRun({
+            runId: run.id,
+            errorMessage: event.message,
+            ttfeMs: firstEventMs,
+            ttfrMs: firstReasoningMs,
+            ttfaMs: firstAnswerMs,
+            ttcMs: Date.now() - runStartedMs,
+            providerMs: providerStartedMs ? Date.now() - providerStartedMs : undefined
+          });
+          writeAgentEvent(reply, {
+            ...event,
+            conversationId
+          });
+          return;
         }
 
         writeAgentEvent(reply, event);
       }
 
       // 防御性兜底：处理 provider 没有显式 done 但已经有回答内容的情况。
-      if (!assistantMessage && assistantParts.length > 0) {
+      if (!terminalAgentError && !assistantMessage && assistantParts.length > 0) {
         assistantMessage = await options.conversations.addMessage({
-          conversationId: conversation.id,
+          conversationId,
           role: "assistant",
           content: assistantParts.join(""),
           reasoningContent: reasoningParts.join("") || undefined,
           sources: dedupeSources(searchSources)
         });
-        await options.conversations.touchConversation(conversation.id);
+        await options.conversations.touchConversation(conversationId);
         await recordTrace("assistant_message_saved", {
           messageId: assistantMessage.id
         });
@@ -241,7 +283,7 @@ export function registerChatRoutes(
           type: "done",
           runId: run.id,
           messageId: assistantMessage.id,
-          conversationId: conversation.id
+          conversationId
         });
       }
     } catch (error) {

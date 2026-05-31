@@ -153,13 +153,18 @@ export function App() {
     };
 
     // 消费 shared AgentEvent 流，把增量内容合并进乐观 assistant 气泡。
-    for await (const streamEvent of api.streamChat({
-      conversationId: activeConversationId,
-      message: text,
-      mode
-    })) {
-      await applyStreamEvent(streamEvent, optimistic, state);
-    }
+    await api.streamChat(
+      {
+        conversationId: activeConversationId,
+        message: text,
+        mode
+      },
+      {
+        onEvent: async (streamEvent) => {
+          await applyStreamEvent(streamEvent, optimistic, state);
+        }
+      }
+    );
 
     await finalizeConversation(state);
     return true;
