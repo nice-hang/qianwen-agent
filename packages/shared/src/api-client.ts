@@ -89,8 +89,16 @@ export function createApiClient(options: ApiClientOptions = {}) {
         body: JSON.stringify(request)
       });
 
-      if (!response.ok || !response.body) {
+      if (!response.ok) {
         throw new Error(`Chat stream failed: ${response.status}`);
+      }
+
+      if (!response.body) {
+        for (const chunk of parseSseLikeStreamChunk(await response.text())) {
+          const event = decodeAgentEvent(chunk);
+          if (event) await streamOptions.onEvent(event);
+        }
+        return;
       }
 
       const reader = response.body.getReader();

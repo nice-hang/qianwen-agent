@@ -69,16 +69,20 @@ Stage 7: Agent Trace 监控
 
 - [ ] 真实联网搜索效果校准
 - [ ] 会话摘要
-- [ ] React Native 移动端
 - [ ] 图片理解
+
+## 进行中
+
+- [ ] React Native 移动端：核心 UI、shared API client、Expo fetch streaming、事件合并、基础 Markdown、深度思考和搜索来源入口已实现；iOS 已启动并截图，Android 因无 AVD/真机尚未完成本地聊天验证。
 
 ## 已知风险
 
-- RN 的 fetch streaming 兼容性需要实际验证。
+- RN 的 fetch streaming 兼容性还需要在真实聊天流里验证；当前移动端优先使用 `expo/fetch`，并为无 `ReadableStream` 的环境保留 text fallback。
 - Stage 5 已决定不优先走 Qwen OpenAI-compatible `enable_search` 作为产品主路径，因为其不稳定返回结构化 sources；先建设自建工具 loop。
 - 已用真实 Qwen deep stream 验证 `reasoning_content`、TTFR 和 reasoning tokens。
 - Agent Trace Viewer 第一版已基于现有 `agent_events` raw payload 实现；后续还需要用真实搜索 run 验证 request1 -> tool -> request2 的完整链路展示。
-- 轻量长期记忆暂缓；会话摘要顺延到 Stage 8。
+- Stage 8 RN 默认复用用户本机已有 Android / iOS 环境；已确认 Xcode 16.0 / iOS Simulator 可用，Android SDK / adb / emulator / system-images 存在，但当前没有 AVD 或连接设备。
+- 轻量长期记忆暂缓；会话摘要顺延到 Stage 9。
 - 本地图片上传转 base64 data URL 需要控制大小，避免超过 provider 限制，已顺延到 RN 之后。
 - 已用真实 `DASHSCOPE_API_KEY` 验证 Stage 1 Qwen OpenAI-compatible 流式调用；本地 `.env` 已被 gitignore。
 
@@ -86,4 +90,4 @@ Stage 7: Agent Trace 监控
 
 1. 用真实搜索 run 验证 Agent Trace Viewer 的 request/tool/request 链路展示。
 2. 校准真实搜索行为：普通知识问题不搜索、时效问题会搜索。
-3. Stage 8 做会话摘要，Stage 9 接 RN，Stage 10 再做图片理解。
+3. Stage 8 继续完成 Android AVD/真机验证和 iOS 真实聊天一轮验证；Stage 9 做会话摘要，Stage 10 再做图片理解。

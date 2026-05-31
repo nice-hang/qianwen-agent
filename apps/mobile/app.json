@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Qianwen Agent",
+    "slug": "qianwen-agent",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "scheme": "qianwen-agent",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.qianwenagent.mobile"
+    },
+    "android": {
+      "package": "com.qianwenagent.mobile"
+    }
+  }
+}

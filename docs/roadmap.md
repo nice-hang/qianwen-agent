@@ -204,7 +204,31 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [x] 能看到工具调用前后状态和耗时
 - [x] 监控只作为本地调试能力，不影响主聊天体验
 
-## Stage 8: 会话摘要
+## Stage 8: React Native 移动端
+
+目标：在 Web 协议稳定后接入移动端，并确保 Android 和 iOS 都能实际跑起来。
+
+- [x] 实现 RN Chat UI
+- [x] 配置 Android 本地运行链路
+- [x] 配置 iOS 本地运行链路
+- [x] 参考 `screenshot/mobile` 还原移动端主聊天体验，隐藏未实现功能入口
+- [x] 接入 shared API client
+- [x] 适配 POST stream transport
+- [x] 实现会话列表/抽屉
+- [x] 实现深度思考卡片
+- [x] 展示 Markdown 回答的基础文本、列表、代码和链接
+- [x] 展示搜索状态和来源入口
+
+验收：
+
+- [ ] 移动端能多轮聊天
+- [ ] 移动端能流式展示回答
+- [ ] 移动端能展示深度思考
+- [ ] 移动端能展示搜索来源
+- [ ] Android 能本地启动并完成一轮聊天
+- [ ] iOS 能本地启动并完成一轮聊天
+
+## Stage 9: 会话摘要
 
 目标：先做同一会话内的轻量摘要，降低长对话上下文压力；暂不做跨会话长期记忆。
 
@@ -221,25 +245,6 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 最近几轮原文不被摘要替代，避免短期指代丢失
 - [ ] 摘要失败不影响主回答链路
 - [ ] 不建立 `memories` 表，不实现 `memory_write` / `memory_delete`
-
-## Stage 9: React Native 移动端
-
-目标：在 Web 协议稳定后接入移动端。
-
-- [ ] 实现 RN Chat UI
-- [ ] 接入 shared API client
-- [ ] 适配 POST stream transport
-- [ ] 实现会话列表/抽屉
-- [ ] 实现深度思考卡片
-- [ ] 展示 Markdown 回答的基础文本、列表、代码和链接
-- [ ] 展示搜索状态和来源入口
-
-验收：
-
-- [ ] 移动端能多轮聊天
-- [ ] 移动端能流式展示回答
-- [ ] 移动端能展示深度思考
-- [ ] 移动端能展示搜索来源
 
 ## Stage 10: 图片理解
 
