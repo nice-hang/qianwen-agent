@@ -29,39 +29,16 @@ qianwen-agent/
   README.md
 ```
 
-`apps/server` 只保留应用边界和适配器：
-
-```txt
-apps/server/
-  src/
-    api/                    # routes/controllers
-    services/               # conversation/message/run/upload services
-    storage/                # Prisma client、repositories
-    stream/                 # POST stream、SSE-like event writer
-    config/                 # env、provider key、server config
-    adapters/               # package interface 到 server 实现的适配器
-      agent/                # AgentStorage、AttachmentResolver 等实现
-      observability/        # PrismaTraceSink 等实现
-
-  prisma/
-    schema.prisma
-    migrations/
-
-  data/                     # SQLite db，gitignore
-  uploads/                  # 本地图片/文件，gitignore
-```
-
 Agent 和可观测分别作为 package：
 
 ```txt
 packages/agent-runtime/
   src/
-    runtime/                # AgentRuntime、AgentLoop
-    context/                # ContextBuilder
-    providers/              # QwenProvider
-    tools/                  # app 自建工具，如 memory_write
-    memory/                 # MemoryManager
-    thought/                # ThoughtPresenter
+    runtime/                # runAgent、agent loop、runtime callbacks
+    context/                # buildProviderMessages
+    providers/              # Qwen provider
+    tools/                  # tool register、web_search、web_fetch
+    summary/                # 后续会话摘要
     types/                  # Agent 内部类型
 
 packages/observability/
@@ -78,7 +55,7 @@ MVP 目标：
 - 深度思考
 - 联网搜索
 - 图片理解
-- 轻量记忆
+- 会话摘要
 - Run trace 调试面板
 
 MVP 暂不做：
@@ -99,7 +76,7 @@ Server
   API / 会话 / 消息 / 附件 / 流式网关 / 持久化
 
 Agent
-  ContextBuilder / QwenProvider / ThoughtPresenter / ToolRegistry / MemoryManager
+  buildProviderMessages / QwenProvider / Agent Loop / ToolRegister / Conversation Summary
 
 Observability
   Run trace / Agent events / Latency / Token usage / Debug UI
@@ -183,36 +160,28 @@ Agent Runtime 是独立 package，被 Server import，不单独部署。
 
 模块：
 
-- `AgentRuntime`
+- `runAgent`
 - `QwenProvider`
-- `ContextBuilder`
-- `ThoughtPresenter`
-- `ToolRegistry`
-- `MemoryManager`
+- `buildProviderMessages`
+- `ToolRegister`
 
 MVP 使用千问官方 OpenAI-compatible API。
 
-深度思考优先走 provider 能力：
+深度思考走 provider 能力：
 
 ```txt
 enable_thinking
-thinking_budget
 reasoning_content
 ```
 
-联网搜索优先走 provider 内置能力：
+联网搜索走自建 tool loop，由模型通过 tool calling 自主决定是否搜索：
 
 ```txt
-enable_search
-search_options
+web_search
+web_fetch
 ```
 
-App 自建工具只做项目内状态能力：
-
-- memory_write
-- memory_delete
-- todo_create 可选
-- calculator 可选
+Tool register 保持极简，只注册当前真实可用工具，不做插件化或复杂生命周期。
 
 ## 数据与上下文
 
@@ -222,7 +191,6 @@ Server 完整保存 messages，Agent Runtime 每轮只消费 ContextBuilder 构�
 system instruction
 mode instruction
 conversation summary
-user memory
 recent N messages
 current attachments
 current user message
@@ -235,7 +203,6 @@ users
 conversations
 messages
 attachments
-memories
 agent_runs
 agent_events
 model_usages
@@ -283,10 +250,13 @@ Stage 0: monorepo 骨架 + shared 协议
 Stage 1: Web + Server + Agent 最小聊天闭环
 Stage 2: Run trace + Debug 页面
 Stage 3: 深度思考
-Stage 4: 联网搜索
-Stage 5: 图片理解
-Stage 6: 轻量记忆
-Stage 7: React Native 移动端
+Stage 3.5: Web UI 千问风格优化
+Stage 4: Markdown 区块渲染
+Stage 5: Agent Loop 与联网搜索
+Stage 6: Agent Runtime 简化与 Tool Register
+Stage 7: 会话摘要
+Stage 8: React Native 移动端
+Stage 9: 图片理解
 ```
 
 每个阶段都尽量打通：

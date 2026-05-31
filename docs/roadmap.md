@@ -79,7 +79,7 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 
 - [x] 支持 `mode: fast | deep`
 - [x] deep mode 开启 `enable_thinking`
-- [x] 配置 `thinking_budget`
+- [x] 移除前端 `thinkingBudget` 透传，deep mode 不再显式传 `thinking_budget`
 - [x] 解析 `reasoning_content`
 - [x] 输出 `reasoning_delta`
 - [x] Web 展示深度思考卡片
@@ -158,41 +158,44 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 普通知识问题不搜索，时效问题会搜索
 - [x] 工具调用完成后才开始输出最终 answer token
 
-## Stage 6: 图片理解
+## Stage 6: Agent Runtime 简化与 Tool Register
 
-目标：打通本地图片上传和千问视觉理解链路。
+目标：在继续叠加新能力前，先收敛 Stage 5 的 agent loop 实现边界，让 Agent 内部闭环更清晰，Server/Web 只接收稳定回调事件。
 
-- [ ] 建立 attachments 表
-- [ ] 实现图片上传接口
-- [ ] 图片保存到 `apps/server/uploads/images`
-- [ ] Web composer 展示图片缩略图
-- [ ] 发消息时携带 `attachmentIds`
-- [ ] Server 调模型前临时转 base64 data URL
-- [ ] QwenProvider 支持 multimodal input
-- [ ] 历史消息展示图片
-
-验收：
-
-- [ ] 用户能上传图片
-- [ ] 用户能发送图文混合消息
-- [ ] 模型能基于图片回答
-- [ ] 历史消息能恢复图片展示
-
-## Stage 7: 轻量记忆
-
-目标：实现显式长期记忆。
-
-- [ ] 建立 memories 表
-- [ ] 实现 `memory_write`
-- [ ] 实现 `memory_delete`
-- [ ] ContextBuilder 注入 active memories
-- [ ] Web 实现 Memory Panel
+- [ ] 将 `runAgent` 从直接暴露大量 `yield` 的生成器风格，收敛为内部 loop + callbacks 的运行方式
+- [ ] 保持 public API 对 Server 尽量稳定，必要时只做一层兼容包装
+- [ ] Server 不再依赖 Agent loop 内部循环细节，只处理 `onEvent` / `onDelta` / `onDone` 等稳定输出
+- [ ] 减少 runtime 内部分散 `yield`，统一由一个 emit 边界输出 shared `AgentEvent`
+- [ ] 增加极简 `tool register`，参考 pi-mono 的注册表思想，但不引入插件系统、class 或复杂生命周期
+- [ ] `web_search` / `web_fetch` 通过 register 暴露 definition 与 execute
+- [ ] 明确未知工具、工具参数解析、工具结果摘要、搜索 sources 提取的单一位置
+- [ ] 更新 Debug/trace 仍能记录工具事件
 
 验收：
 
-- [ ] 用户能要求系统记住一条偏好/项目事实
-- [ ] 新会话能使用已记忆内容
-- [ ] 用户能查看和删除记忆
+- [ ] 现有聊天、深度思考、搜索来源展示行为不变
+- [ ] `apps/server` 不需要理解 tool iteration、provider tool call delta 聚合等 runtime 内部细节
+- [ ] `agent-runtime` 内部工具注册/查找/执行路径清晰，新增一个工具只需改一处注册表
+- [ ] 工具事件、搜索 sources、最终 `done` 仍完整到达 Server 和 Web
+- [ ] `pnpm --filter @qianwen-agent/agent-runtime typecheck` 和 `pnpm typecheck` 通过
+
+## Stage 7: 会话摘要
+
+目标：先做同一会话内的轻量摘要，降低长对话上下文压力；暂不做跨会话长期记忆。
+
+- [ ] 使用现有 `conversations.summary` 字段保存会话摘要
+- [ ] 设计摘要触发策略：消息数、token 估算或回答完成后异步更新
+- [ ] ContextBuilder 在长会话中注入 summary + recent messages
+- [ ] 摘要生成走 Agent Runtime 内部能力，不暴露给 Web 控制
+- [ ] Debug 中记录摘要生成/更新事件
+- [ ] Web 可在会话列表或调试页展示摘要状态，主聊天不增加复杂入口
+
+验收：
+
+- [ ] 长会话刷新后仍能使用已有摘要构造上下文
+- [ ] 最近几轮原文不被摘要替代，避免短期指代丢失
+- [ ] 摘要失败不影响主回答链路
+- [ ] 不建立 `memories` 表，不实现 `memory_write` / `memory_delete`
 
 ## Stage 8: React Native 移动端
 
@@ -202,12 +205,34 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 接入 shared API client
 - [ ] 适配 POST stream transport
 - [ ] 实现会话列表/抽屉
-- [ ] 实现图片选择和上传
 - [ ] 实现深度思考卡片
+- [ ] 展示 Markdown 回答的基础文本、列表、代码和链接
+- [ ] 展示搜索状态和来源入口
 
 验收：
 
 - [ ] 移动端能多轮聊天
 - [ ] 移动端能流式展示回答
-- [ ] 移动端能上传图片
 - [ ] 移动端能展示深度思考
+- [ ] 移动端能展示搜索来源
+
+## Stage 9: 图片理解
+
+目标：在 Web、Server、Agent Runtime 和 RN 基础链路稳定后，再打通本地图片上传和千问视觉理解链路。
+
+- [ ] 建立 attachments 表
+- [ ] 实现图片上传接口
+- [ ] 图片保存到 `apps/server/uploads/images`
+- [ ] Web composer 展示图片缩略图
+- [ ] RN 适配图片选择和上传
+- [ ] 发消息时携带 `attachmentIds`
+- [ ] Server 调模型前临时转 base64 data URL 或可访问 URL
+- [ ] QwenProvider 支持 multimodal input
+- [ ] 历史消息展示图片
+
+验收：
+
+- [ ] 用户能上传图片
+- [ ] 用户能发送图文混合消息
+- [ ] 模型能基于图片回答
+- [ ] Web 和 RN 历史消息能恢复图片展示

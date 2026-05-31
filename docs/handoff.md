@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-准备进入 Stage 5：Agent Loop 与联网搜索。
+准备进入 Stage 6：Agent Runtime 简化与 Tool Register。
 
 ## 当前状态
 
@@ -19,7 +19,7 @@
 - Stage 2 已完成：Server 会为每次聊天创建 run trace，记录事件 timeline、TTFE、TTFA、TTC、provider latency 和 Qwen token usage。
 - 已实现 `GET /debug/runs` 和 `GET /debug/runs/:runId`，Web 有 Chat / Debug 视图切换，可查看 run 列表、timeline、耗时和 usage。
 - 已用真实 Qwen stream 验证 `stream_options.include_usage`，`done` event 和 `model_usages` 都能拿到 token usage。
-- Stage 3 已完成：Web 支持 Fast / Deep 模式切换，Server / Agent Runtime 支持 `enable_thinking` 和 `thinking_budget`。
+- Stage 3 已完成：Web 支持 Fast / Deep 模式切换，Server / Agent Runtime 支持 `enable_thinking`；当前 deep mode 不再显式传 `thinking_budget`。
 - 已用真实 Qwen deep stream 验证 `reasoning_delta`、`answer_delta`、TTFR、reasoning tokens 和刷新后恢复 `reasoningContent`。
 - Stage 3.5 已完成：参考国内版千问 `https://www.qianwen.com/` 登录态界面优化当前 Web UI。
 - Stage 3.5 已隐藏未实现能力入口，只展示当前真实可用能力。
@@ -31,6 +31,7 @@
 - Stage 5 方案已确定：先做轻量 Agent Loop，再接自建 `web_search` / `web_fetch` 工具；不优先用 Qwen OpenAI-compatible `enable_search` 做产品主路径。
 - Stage 5 Agent Loop 基础改造已实现：Qwen tool-call stream、内置工具表、sources 持久化、Web 来源 chip / drawer 均已接入。
 - `web_search` 第一版使用 `TAVILY_API_KEY` 调 Tavily；未配置时返回空 sources 和明确 note，loop 仍可继续。
+- 后续阶段已重新规划：Stage 6 先做 Agent Runtime 简化与极简 tool register，Stage 7 做同一会话摘要，Stage 8 做 React Native，Stage 9 再做图片理解。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -49,8 +50,10 @@
 - MarkdownRenderer 使用 Markdown 原生能力渲染标题、列表、代码块、表格、引用和链接。
 - Stage 5 不优先使用千问 provider 的 `enable_search` 作为产品主路径，因为 OpenAI-compatible Chat Completions 无法稳定返回结构化 sources。
 - 是否搜索由模型通过 tool calling 自主决定，不由前端传 search 开关，也不由 runtime 关键词规则决定。
-- Agent Loop 第一版保持函数式 orchestration，不引入 Runtime class、LangGraph 或复杂 ToolRegistry class。
-- 图片理解后续走 multimodal input / provider message projection，不作为 Stage 5 工具扩展示例。
+- Agent Loop 第一版已跑通，但 Stage 6 需要继续简化运行时边界：减少分散 `yield`，让 Agent 内部闭环，通过 callback 输出稳定 shared `AgentEvent`。
+- Tool register 参考 pi-mono 的注册表思想，但保持极简：不引入 Runtime class、LangGraph、MCP、插件系统或复杂生命周期。
+- 轻量长期记忆暂缓；下一步更优先做同一会话摘要，复用 `conversations.summary`，解决长会话上下文压力。
+- 图片理解后续走 multimodal input / provider message projection，不作为工具扩展示例，并顺延到 RN 之后。
 - 搜索来源第一版直接持久化到 assistant message 的 `sourcesJson`，不先建 `message_sources` 表。
 - Web UI 优化参考国内版千问，不直接复制商标、官方图形资源或未实现能力入口。
 - 图片 MVP 存本地 uploads，调用模型时临时转 base64 data URL。
@@ -62,6 +65,7 @@
 2. `README.md`
 3. `docs/roadmap.md`
 4. `docs/status.md`
+5. `docs/solutions/0008-runtime-callback-tool-register.md`
 
 需要追溯背景时再读：
 
@@ -73,10 +77,10 @@
 
 ## 下一步建议
 
-1. 配置真实 `TAVILY_API_KEY` 后校准 Qwen 是否能稳定自主调用 `web_search`。
-2. 手工验证普通知识问题不搜索、时效问题会搜索。
-3. 继续补来源 drawer 移动端截图和视觉调整。
-4. 评估 Tavily 中文搜索质量，必要时切换 Brave/Bing/国内搜索服务。
+1. 实现 `docs/solutions/0008-runtime-callback-tool-register.md`：callback 版 `runAgent` + 极简 tool register。
+2. 保持现有聊天、深度思考、搜索来源展示行为不变，并跑 agent-runtime / 全仓 typecheck。
+3. Stage 6 完成后继续校准真实搜索行为和 Tavily 中文搜索质量。
+4. Stage 7 做同一会话摘要，Stage 8 做 RN，Stage 9 再做图片理解。
 
 ## 阻塞项
 

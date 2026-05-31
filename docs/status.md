@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Stage 5: Agent Loop 与联网搜索
+Stage 6: Agent Runtime 简化与 Tool Register 规划
 
 ## 已完成
 
@@ -32,8 +32,8 @@ Stage 5: Agent Loop 与联网搜索
 - [x] 实现 `/debug/runs` 和 `/debug/runs/:runId`
 - [x] Web 实现 Debug 视图、run 列表、timeline、耗时和 usage 展示
 - [x] 完成 Stage 3 深度思考
-- [x] `POST /api/chat/stream` 支持 `mode: fast | deep` 和 `thinkingBudget`
-- [x] Agent Runtime 支持 Qwen `enable_thinking` / `thinking_budget`
+- [x] `POST /api/chat/stream` 支持 `mode: fast | deep`
+- [x] Agent Runtime 支持 Qwen `enable_thinking`，deep mode 不再显式传 `thinking_budget`
 - [x] 解析并流式输出 `reasoning_delta`
 - [x] Server 保存 assistant `reasoningContent`
 - [x] Debug 记录并展示 TTFR 和 reasoning tokens
@@ -48,30 +48,37 @@ Stage 5: Agent Loop 与联网搜索
 - [x] Web assistant content 和 reasoningContent 均使用 MarkdownRenderer
 - [x] 支持标题、列表、引用、链接、表格、inline code 和 fenced code block 自定义渲染
 - [x] CodeBlock 支持语言标签、复制和横向滚动，TableBlock 支持外层横向滚动
+- [x] 完成 Stage 5 Agent Loop 与联网搜索基础实现
+- [x] Qwen provider 支持 tool calling stream
+- [x] 接入 `web_search` / `web_fetch` 内置工具和 sources 持久化
+- [x] Web 支持搜索状态、来源 chip 和右侧来源 drawer
 
 ## 进行中
 
-- [x] Stage 5 Agent Loop 基础改造已完成
-- [x] 已接入 `web_search` / `web_fetch` 内置工具和 sources 持久化
+- [x] 已重新规划 Stage 6-9
+- [ ] Stage 6 待实现：Agent Runtime callback 边界 + 极简 tool register
 - [ ] 待真实 `TAVILY_API_KEY` 环境下校准模型是否按预期自动搜索
 
 ## 未开始
 
 - [ ] 真实联网搜索效果校准
+- [ ] 会话摘要
+- [ ] React Native 移动端
 - [ ] 图片理解
-- [ ] 轻量记忆
 
 ## 已知风险
 
 - RN 的 fetch streaming 兼容性需要实际验证。
 - Stage 5 已决定不优先走 Qwen OpenAI-compatible `enable_search` 作为产品主路径，因为其不稳定返回结构化 sources；先建设自建工具 loop。
 - 已用真实 Qwen deep stream 验证 `reasoning_content`、TTFR 和 reasoning tokens。
-- 本地图片上传转 base64 data URL 需要控制大小，避免超过 provider 限制。
+- Stage 6 需要先简化当前 agent loop，实现 callback 输出边界和极简 tool register，避免后续 summary/RN/image 继续叠在分散 `yield` 上。
+- 轻量长期记忆暂缓；当前更优先做同一会话摘要，避免长会话上下文膨胀。
+- 本地图片上传转 base64 data URL 需要控制大小，避免超过 provider 限制，已顺延到 RN 之后。
 - 已用真实 `DASHSCOPE_API_KEY` 验证 Stage 1 Qwen OpenAI-compatible 流式调用；本地 `.env` 已被 gitignore。
 
 ## 下一步
 
-1. 配置真实 `TAVILY_API_KEY` 后校准 Qwen tool calling 行为。
-2. 手工验证普通知识问题不搜索、时效问题会搜索。
-3. 继续打磨来源 drawer 的移动端截图。
-4. 评估是否继续使用 Tavily，或切换到 Brave/Bing/国内搜索服务。
+1. 实现 Stage 6：Agent Runtime callback 边界与极简 tool register。
+2. 在 Stage 6 后继续校准真实搜索行为：普通知识问题不搜索、时效问题会搜索。
+3. Stage 7 做同一会话摘要，暂不做跨会话长期记忆。
+4. Stage 8 接 RN，Stage 9 再做图片理解。
