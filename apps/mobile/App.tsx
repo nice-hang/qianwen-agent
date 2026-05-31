@@ -24,7 +24,7 @@ import {
 } from "./src/utils/chat";
 
 const api = createApiClient({
-  baseUrl: Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001",
+  baseUrl: getApiBaseUrl(),
   fetchImpl: expoFetch as typeof fetch
 });
 
@@ -270,6 +270,7 @@ export default function App() {
                   key={message.id}
                   message={message}
                   onOpenSources={setActiveSources}
+                  resolveAttachmentUrl={resolveAttachmentUrl}
                 />
               ))
             )}
@@ -301,4 +302,13 @@ export default function App() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+function getApiBaseUrl(): string {
+  return Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
+}
+
+function resolveAttachmentUrl(url: string): string {
+  if (/^https?:\/\//u.test(url)) return url;
+  return `${getApiBaseUrl()}${url}`;
 }

@@ -4,6 +4,7 @@ import {
   type AgentEvent,
   type AgentRunSummary,
   type AgentTraceEvent,
+  type ChatAttachment,
   type ChatMessage,
   type Conversation,
   type ModelUsage,
@@ -14,8 +15,9 @@ import { DebugView } from "./components/DebugView";
 import { readError } from "./utils";
 import "./App.css";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:3001";
 const api = createApiClient({
-  baseUrl: import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:3001"
+  baseUrl: API_BASE_URL
 });
 
 export function App() {
@@ -28,6 +30,7 @@ export function App() {
   const [runEvents, setRunEvents] = useState<AgentTraceEvent[]>([]);
   const [runUsage, setRunUsage] = useState<ModelUsage>();
   const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [mode, setMode] = useState<"fast" | "deep">("fast");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string>();
@@ -99,6 +102,7 @@ export function App() {
   async function startNewChat() {
     setActiveConversationId(undefined);
     setMessages([]);
+    setAttachments([]);
     setError(undefined);
     setView("chat");
   }
@@ -122,12 +126,18 @@ export function App() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = draft.trim();
-    if (!text || isSending) return;
+    if ((!text && attachments.length === 0) || isSending) return;
 
-    const optimistic = createOptimisticMessages(text, activeConversationId);
+    const optimistic = createOptimisticMessages(
+      text,
+      activeConversationId,
+      attachments
+    );
     beginSending(optimistic);
 
-    const sent = await withRequest(() => sendMessage(text, optimistic));
+    const sent = await withRequest(() =>
+      sendMessage(text, attachments, optimistic)
+    );
     if (!sent) {
       updateMessage(optimistic.assistant.id, { status: "failed" });
     }
@@ -137,6 +147,7 @@ export function App() {
 
   function beginSending(optimistic: OptimisticMessages) {
     setDraft("");
+    setAttachments([]);
     setError(undefined);
     setIsSending(true);
     setMessages((current) => [
@@ -146,7 +157,11 @@ export function App() {
     ]);
   }
 
-  async function sendMessage(text: string, optimistic: OptimisticMessages) {
+  async function sendMessage(
+    text: string,
+    sentAttachments: ChatAttachment[],
+    optimistic: OptimisticMessages
+  ) {
     const state: SendState = {
       conversationId: activeConversationId,
       assistantId: optimistic.assistant.id
@@ -157,7 +172,8 @@ export function App() {
       {
         conversationId: activeConversationId,
         message: text,
-        mode
+        mode,
+        attachmentIds: sentAttachments.map((attachment) => attachment.id)
       },
       {
         onEvent: async (streamEvent) => {
@@ -304,6 +320,20 @@ export function App() {
     );
   }
 
+  async function uploadImage(file: File) {
+    const dataUrl = await readFileAsDataUrl(file);
+    const response = await withRequest(() =>
+      api.uploadImage({
+        fileName: file.name,
+        mimeType: file.type,
+        dataUrl
+      })
+    );
+
+    if (!response) return;
+    setAttachments((current) => [...current, response.attachment]);
+  }
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -356,8 +386,16 @@ export function App() {
           messages={messages}
           mode={mode}
           onDraftChange={setDraft}
+          onImageSelected={(file) => void uploadImage(file)}
           onModeChange={setMode}
+          onRemoveAttachment={(attachmentId) =>
+            setAttachments((current) =>
+              current.filter((attachment) => attachment.id !== attachmentId)
+            )
+          }
           onSubmit={handleSubmit}
+          resolveAttachmentUrl={resolveAttachmentUrl}
+          selectedAttachments={attachments}
         />
       ) : (
         <DebugView
@@ -386,7 +424,8 @@ interface SendState {
 
 function createOptimisticMessages(
   text: string,
-  conversationId?: string
+  conversationId?: string,
+  attachments: ChatAttachment[] = []
 ): OptimisticMessages {
   const createdAt = new Date().toISOString();
 
@@ -399,6 +438,7 @@ function createOptimisticMessages(
       content: text,
       reasoningContent: null,
       sources: undefined,
+      attachments,
       activity: undefined,
       createdAt
     },
@@ -414,6 +454,20 @@ function createOptimisticMessages(
       createdAt
     }
   };
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("Read file failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function resolveAttachmentUrl(url: string): string {
+  if (/^https?:\/\//u.test(url)) return url;
+  return `${API_BASE_URL}${url}`;
 }
 
 function dedupeSources(

@@ -5,7 +5,12 @@ import {
   type FormEvent,
   type KeyboardEvent
 } from "react";
-import type { ChatMessage, Conversation, SearchSource } from "@qianwen-agent/shared";
+import type {
+  ChatAttachment,
+  ChatMessage,
+  Conversation,
+  SearchSource
+} from "@qianwen-agent/shared";
 import { MarkdownRenderer } from "./markdown/MarkdownRenderer";
 import "./ChatView.css";
 
@@ -16,9 +21,13 @@ interface ChatViewProps {
   isSending: boolean;
   messages: ChatMessage[];
   mode: "fast" | "deep";
+  selectedAttachments: ChatAttachment[];
   onDraftChange: (draft: string) => void;
+  onImageSelected: (file: File) => void;
   onModeChange: (mode: "fast" | "deep") => void;
+  onRemoveAttachment: (attachmentId: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  resolveAttachmentUrl: (url: string) => string;
 }
 
 export function ChatView(props: ChatViewProps) {
@@ -54,6 +63,7 @@ export function ChatView(props: ChatViewProps) {
                   sources
                 })
               }
+              resolveAttachmentUrl={props.resolveAttachmentUrl}
             />
           ))
         )}
@@ -70,6 +80,13 @@ export function ChatView(props: ChatViewProps) {
       {props.error ? <div className="error">{props.error}</div> : null}
 
       <form className="composer" onSubmit={props.onSubmit}>
+        {props.selectedAttachments.length > 0 ? (
+          <AttachmentPreviewStrip
+            attachments={props.selectedAttachments}
+            onRemove={props.onRemoveAttachment}
+            resolveAttachmentUrl={props.resolveAttachmentUrl}
+          />
+        ) : null}
         <textarea
           value={props.draft}
           onChange={(event) => props.onDraftChange(event.target.value)}
@@ -79,6 +96,18 @@ export function ChatView(props: ChatViewProps) {
         />
         <div className="composer-footer">
           <div className="composer-controls">
+            <label className="image-upload-button" title="上传图片">
+              <input
+                accept="image/*"
+                type="file"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  event.currentTarget.value = "";
+                  if (file) props.onImageSelected(file);
+                }}
+              />
+              <span aria-hidden="true">＋</span>
+            </label>
             <div className="mode-switch" aria-label="Chat mode">
               <button
                 className={props.mode === "fast" ? "active" : undefined}
@@ -99,7 +128,10 @@ export function ChatView(props: ChatViewProps) {
           <button
             className="send-button"
             type="submit"
-            disabled={props.isSending || !props.draft.trim()}
+            disabled={
+              props.isSending ||
+              (!props.draft.trim() && props.selectedAttachments.length === 0)
+            }
             aria-label="Send message"
           >
             ↑
@@ -122,6 +154,7 @@ export function ChatView(props: ChatViewProps) {
 function MessageBubble(props: {
   message: ChatMessage;
   onOpenSources: (sources: SearchSource[]) => void;
+  resolveAttachmentUrl: (url: string) => string;
 }) {
   const { message } = props;
   const sources = message.sources ?? [];
@@ -133,14 +166,20 @@ function MessageBubble(props: {
 
   return (
     <article className={`bubble ${message.role}`}>
+      {message.attachments?.length ? (
+        <MessageAttachments
+          attachments={message.attachments}
+          resolveAttachmentUrl={props.resolveAttachmentUrl}
+        />
+      ) : null}
       {hasReasoning ? (
         <ThinkingBlock message={message} />
       ) : null}
       {message.content ? (
         <MarkdownRenderer content={message.content} />
-      ) : (
+      ) : placeholder ? (
         <p>{placeholder}</p>
-      )}
+      ) : null}
       {message.role === "assistant" && sources.length > 0 ? (
         <button
           className="source-chip"
@@ -152,6 +191,49 @@ function MessageBubble(props: {
         </button>
       ) : null}
     </article>
+  );
+}
+
+function AttachmentPreviewStrip(props: {
+  attachments: ChatAttachment[];
+  onRemove: (attachmentId: string) => void;
+  resolveAttachmentUrl: (url: string) => string;
+}) {
+  return (
+    <div className="attachment-preview-strip">
+      {props.attachments.map((attachment) => (
+        <div className="attachment-preview" key={attachment.id}>
+          <img
+            alt={attachment.fileName}
+            src={props.resolveAttachmentUrl(attachment.url)}
+          />
+          <button
+            type="button"
+            onClick={() => props.onRemove(attachment.id)}
+            aria-label={`移除 ${attachment.fileName}`}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MessageAttachments(props: {
+  attachments: ChatAttachment[];
+  resolveAttachmentUrl: (url: string) => string;
+}) {
+  return (
+    <div className="message-attachments">
+      {props.attachments.map((attachment) => (
+        <img
+          alt={attachment.fileName}
+          key={attachment.id}
+          src={props.resolveAttachmentUrl(attachment.url)}
+        />
+      ))}
+    </div>
   );
 }
 

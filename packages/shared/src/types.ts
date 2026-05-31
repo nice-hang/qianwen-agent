@@ -10,7 +10,20 @@ export interface ChatMessage {
   content: string;
   reasoningContent?: string | null;
   sources?: SearchSource[];
+  attachments?: ChatAttachment[];
   activity?: string;
+  createdAt: string;
+}
+
+export interface ChatAttachment {
+  id: string;
+  conversationId?: string | null;
+  messageId?: string | null;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  url: string;
+  imageDataUrl?: string;
   createdAt: string;
 }
 
@@ -73,6 +86,13 @@ export interface ChatStreamRequest {
   conversationId?: string;
   message: string;
   mode?: "fast" | "deep";
+  attachmentIds?: string[];
+}
+
+export interface UploadImageRequest {
+  fileName: string;
+  mimeType: string;
+  dataUrl: string;
 }
 
 export interface SearchSource {

@@ -121,6 +121,20 @@ export const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 24
   },
+  messageImageGrid: {
+    maxWidth: "82%",
+    marginBottom: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: 8
+  },
+  messageImage: {
+    width: 140,
+    height: 140,
+    borderRadius: 14,
+    backgroundColor: "#f4f4f4"
+  },
   assistantRow: {
     alignItems: "stretch",
     marginBottom: 18

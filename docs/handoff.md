@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-正在实现 Stage 8：React Native 移动端，目标是 Android 和 iOS 都能跑起来。
+正在收尾 Stage 9：图片理解，Web / Server / Agent Runtime 主链路已完成，RN 还缺原生图片选择上传入口。
 
 ## 当前状态
 
@@ -31,7 +31,7 @@
 - Stage 5 方案已确定：先做轻量 Agent Loop，再接自建 `web_search` / `web_fetch` 工具；不优先用 Qwen OpenAI-compatible `enable_search` 做产品主路径。
 - Stage 5 Agent Loop 基础改造已实现：Qwen tool-call stream、内置工具表、sources 持久化、Web 来源 chip / drawer 均已接入。
 - `web_search` 第一版使用 `TAVILY_API_KEY` 调 Tavily；未配置时返回空 sources 和明确 note，loop 仍可继续。
-- 后续阶段已重新规划：Stage 6 先做 Agent Runtime 简化与极简 tool register，Stage 7 做 Agent Trace 监控，Stage 8 做 React Native，Stage 9 做同一会话摘要，Stage 10 再做图片理解。
+- 后续阶段已重新规划：Stage 6 先做 Agent Runtime 简化与极简 tool register，Stage 7 做 Agent Trace 监控，Stage 8 做 React Native，Stage 9 做图片理解，Stage 10 再做同一会话摘要。
 - Stage 6 已完成：`runAgent` 已直接切换为 callback 版本，旧 async iterable 入口已删除；Server 改为通过 `onEvent` 接收 runtime 事件。
 - Stage 6 已新增极简 tool register，`web_search` / `web_fetch` 在工具侧声明 definition、execute、summarize 和 toEvents。
 - Stage 6 已新增 `provider_request` / `provider_response` debug 事件，Server 只落 trace，不转发给主聊天 Web。
@@ -42,6 +42,11 @@
 - Stage 8 RN 已补 `apps/mobile/index.ts` 使用 `registerRootComponent(App)`，避免 pnpm workspace 下 `expo/AppEntry` 解析 `../../App` 失败。
 - Stage 8 RN 已确认 iOS 环境可用：Xcode 16.0，iPhone 16 Simulator 可启动，Expo iOS bundle 成功并完成页面截图。
 - Stage 8 RN 已确认 Android SDK / adb / emulator / system-images 存在，但当前没有连接设备，也没有 AVD；Android 真机/模拟器聊天验证还未完成。
+- Stage 9 已建立 `Attachment` 表和本地图片上传接口 `POST /api/attachments/images`，图片保存到 `apps/server/uploads/images`。
+- Stage 9 Web composer 已支持图片选择、上传、缩略图预览、随消息发送 `attachmentIds` 和历史消息图片展示。
+- Stage 9 Server 会在聊天前把当前用户消息的图片临时读取为 base64 data URL，传给 Agent Runtime；trace 中会隐藏图片 data URL。
+- Stage 9 Agent Runtime 已支持 OpenAI-compatible multimodal content；含图不切模型，继续使用当前 `QWEN_MODEL`。
+- Stage 9 RN 已支持历史图片展示；原生图片选择和上传入口暂未接入，因为当前依赖未安装 `expo-image-picker`。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -62,8 +67,8 @@
 - 是否搜索由模型通过 tool calling 自主决定，不由前端传 search 开关，也不由 runtime 关键词规则决定。
 - Agent Loop 参考 `/Users/bytedance/Documents/github/pi-mono/packages/agent` 的 emit/context/tool 执行设计，但只保留当前需要的 callback emit、极简 tool register、prepare/execute/finalize；不引入 Runtime class、turn、steering、followUp、LangGraph、MCP、插件系统或复杂生命周期。
 - Stage 7 做类似 claude-tap 的 Agent Trace 监控，重点能看到每轮 provider request 的 messages/tools、工具调用前后、相邻 request diff。
-- 轻量长期记忆暂缓；同一会话摘要顺延到 Stage 9，复用 `conversations.summary`，解决长会话上下文压力。
-- 图片理解后续走 multimodal input / provider message projection，不作为工具扩展示例，并顺延到 RN 之后。
+- 图片理解走 multimodal input / provider message projection，不作为工具扩展示例；Server 上传接口采用 JSON data URL，避免为 MVP 引入 multipart 依赖。
+- 轻量长期记忆暂缓；同一会话摘要顺延到 Stage 10，复用 `conversations.summary`，解决长会话上下文压力。
 - 搜索来源第一版直接持久化到 assistant message 的 `sourcesJson`，不先建 `message_sources` 表。
 - Web UI 优化参考国内版千问，不直接复制商标、官方图形资源或未实现能力入口。
 - 图片 MVP 存本地 uploads，调用模型时临时转 base64 data URL。
@@ -78,6 +83,8 @@
 5. `docs/solutions/0008-runtime-callback-tool-register.md`
 6. `docs/solutions/0009-agent-trace-monitoring.md`
 7. `docs/solutions/0010-react-native-client.md`
+8. `docs/solutions/0011-image-understanding.md`
+9. `docs/solutions/0012-conversation-summary.md`
 
 需要追溯背景时再读：
 
@@ -91,8 +98,9 @@
 
 1. 用真实搜索 run 验证 Agent Trace Viewer 的 request1 -> tool call -> request2 -> final answer 链路。
 2. 校准真实搜索行为和 Tavily 中文搜索质量。
-3. Stage 8 继续补 Android AVD/真机验证，并在 iOS 上完成一轮真实聊天验证；Stage 9 做同一会话摘要，Stage 10 再做图片理解。
+3. Stage 9 补 RN 原生图片选择上传入口，并用当前 `QWEN_MODEL` 完成图文回答验证；Stage 10 再做同一会话摘要。
 
 ## 阻塞项
 
 - Android 当前没有 AVD 或连接设备，需创建一个 AVD 或连接真机后继续验证。
+- RN 原生图片选择需要新增 `expo-image-picker` 或等价 Expo 选图依赖。

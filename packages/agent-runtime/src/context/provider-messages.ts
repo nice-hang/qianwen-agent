@@ -3,7 +3,7 @@ import type { ChatMessage } from "@qianwen-agent/shared";
 export type ProviderMessage =
   | {
       role: "user" | "assistant" | "system";
-      content: string;
+      content: string | ProviderContentPart[];
     }
   | {
       role: "assistant";
@@ -25,18 +25,62 @@ export interface ProviderToolCall {
   };
 }
 
+export type ProviderContentPart =
+  | {
+      type: "text";
+      text: string;
+    }
+  | {
+      type: "image_url";
+      image_url: {
+        url: string;
+      };
+    };
+
 export function buildProviderMessages(messages: ChatMessage[]): ProviderMessage[] {
   // Server 保存应用消息；provider 只接收精简后的模型输入投影。
   const providerMessages: ProviderMessage[] = [];
 
   for (const message of messages) {
-    if (!message.content.trim()) continue;
+    const content = buildMessageContent(message);
+    if (!content) continue;
 
     providerMessages.push({
       role: message.role,
-      content: message.content
+      content
     });
   }
 
   return providerMessages;
+}
+
+function buildMessageContent(message: ChatMessage): string | ProviderContentPart[] | null {
+  const text = message.content.trim();
+  const imageParts =
+    message.role === "user"
+      ? (message.attachments ?? [])
+          .filter((attachment) => attachment.mimeType.startsWith("image/"))
+          .flatMap((attachment) =>
+            attachment.imageDataUrl
+              ? [
+                  {
+                    type: "image_url" as const,
+                    image_url: { url: attachment.imageDataUrl }
+                  }
+                ]
+              : []
+          )
+      : [];
+
+  if (imageParts.length === 0) {
+    return text || null;
+  }
+
+  return [
+    {
+      type: "text",
+      text: text || "请根据图片内容回答。"
+    },
+    ...imageParts
+  ];
 }

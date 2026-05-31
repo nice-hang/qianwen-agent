@@ -20,7 +20,7 @@ In Progress
 
 Web 侧已经完成多轮聊天、深度思考、Markdown 渲染、联网搜索来源和 Debug Trace。下一步先把核心聊天能力适配到 `apps/mobile`，验证 shared API client 和 shared 协议在 React Native 环境下可用。
 
-这一步优先做移动端主聊天闭环，并把 Android / iOS 两端本地运行链路打通。不做图片上传；图片理解顺延到 Stage 10。
+这一步优先做移动端主聊天闭环，并把 Android / iOS 两端本地运行链路打通。不做图片上传；图片理解顺延到 Stage 9。
 
 用户本机预计已经具备 Android 和 iOS 开发环境。实现时优先检测并复用现有环境，例如 Android Studio / Android SDK / emulator、Xcode / iOS Simulator、CocoaPods 或 Expo 相关工具；不要默认重装或大规模改造本机工具链。只有发现具体缺口时，再补最小依赖或给出明确缺失项。
 

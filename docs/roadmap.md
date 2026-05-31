@@ -228,7 +228,28 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] Android 能本地启动并完成一轮聊天
 - [ ] iOS 能本地启动并完成一轮聊天
 
-## Stage 9: 会话摘要
+## Stage 9: 图片理解
+
+目标：在 Web、Server、Agent Runtime 和 RN 基础链路稳定后，打通本地图片上传和千问视觉理解链路。
+
+- [x] 建立 attachments 表
+- [x] 实现图片上传接口
+- [x] 图片保存到 `apps/server/uploads/images`
+- [x] Web composer 展示图片缩略图
+- [ ] RN 适配图片选择和上传
+- [x] 发消息时携带 `attachmentIds`
+- [x] Server 调模型前临时转 base64 data URL 或可访问 URL
+- [x] QwenProvider 支持 multimodal input
+- [x] 历史消息展示图片
+
+验收：
+
+- [x] 用户能上传图片
+- [x] 用户能发送图文混合消息
+- [ ] 模型能基于图片回答
+- [x] Web 和 RN 历史消息能恢复图片展示
+
+## Stage 10: 会话摘要
 
 目标：先做同一会话内的轻量摘要，降低长对话上下文压力；暂不做跨会话长期记忆。
 
@@ -245,24 +266,3 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 最近几轮原文不被摘要替代，避免短期指代丢失
 - [ ] 摘要失败不影响主回答链路
 - [ ] 不建立 `memories` 表，不实现 `memory_write` / `memory_delete`
-
-## Stage 10: 图片理解
-
-目标：在 Web、Server、Agent Runtime 和 RN 基础链路稳定后，再打通本地图片上传和千问视觉理解链路。
-
-- [ ] 建立 attachments 表
-- [ ] 实现图片上传接口
-- [ ] 图片保存到 `apps/server/uploads/images`
-- [ ] Web composer 展示图片缩略图
-- [ ] RN 适配图片选择和上传
-- [ ] 发消息时携带 `attachmentIds`
-- [ ] Server 调模型前临时转 base64 data URL 或可访问 URL
-- [ ] QwenProvider 支持 multimodal input
-- [ ] 历史消息展示图片
-
-验收：
-
-- [ ] 用户能上传图片
-- [ ] 用户能发送图文混合消息
-- [ ] 模型能基于图片回答
-- [ ] Web 和 RN 历史消息能恢复图片展示

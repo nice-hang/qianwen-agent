@@ -1,11 +1,16 @@
 import type {
+  ChatAttachment,
   ChatMessage,
   Conversation,
   MessageRole,
   MessageStatus,
   SearchSource
 } from "@qianwen-agent/shared";
-import type { Conversation as DbConversation, Message } from "@prisma/client";
+import type {
+  Attachment,
+  Conversation as DbConversation,
+  Message
+} from "@prisma/client";
 
 export function toConversation(conversation: DbConversation): Conversation {
   return {
@@ -17,7 +22,9 @@ export function toConversation(conversation: DbConversation): Conversation {
   };
 }
 
-export function toChatMessage(message: Message): ChatMessage {
+export function toChatMessage(
+  message: Message & { attachments?: Attachment[] }
+): ChatMessage {
   return {
     id: message.id,
     conversationId: message.conversationId,
@@ -26,7 +33,21 @@ export function toChatMessage(message: Message): ChatMessage {
     content: message.content,
     reasoningContent: message.reasoningContent,
     sources: parseSources(message.sourcesJson),
+    attachments: message.attachments?.map(toChatAttachment),
     createdAt: message.createdAt.toISOString()
+  };
+}
+
+export function toChatAttachment(attachment: Attachment): ChatAttachment {
+  return {
+    id: attachment.id,
+    conversationId: attachment.conversationId,
+    messageId: attachment.messageId,
+    fileName: attachment.fileName,
+    mimeType: attachment.mimeType,
+    sizeBytes: attachment.sizeBytes,
+    url: `/api/attachments/${attachment.id}/file`,
+    createdAt: attachment.createdAt.toISOString()
   };
 }
 

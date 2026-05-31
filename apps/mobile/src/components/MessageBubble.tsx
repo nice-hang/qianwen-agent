@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import type { ChatMessage, SearchSource } from "@qianwen-agent/shared";
 import { MarkdownText } from "../markdown/MarkdownText";
 import { styles } from "../styles";
@@ -7,6 +7,7 @@ import { styles } from "../styles";
 interface MessageBubbleProps {
   message: ChatMessage;
   onOpenSources: (sources: SearchSource[]) => void;
+  resolveAttachmentUrl: (url: string) => string;
 }
 
 export function MessageBubble(props: MessageBubbleProps) {
@@ -23,15 +24,40 @@ export function MessageBubble(props: MessageBubbleProps) {
   if (isUser) {
     return (
       <View style={styles.userRow}>
-        <View style={styles.userBubble}>
-          <Text style={styles.userText}>{props.message.content}</Text>
-        </View>
+        {props.message.attachments?.length ? (
+          <View style={styles.messageImageGrid}>
+            {props.message.attachments.map((attachment) => (
+              <Image
+                key={attachment.id}
+                source={{ uri: props.resolveAttachmentUrl(attachment.url) }}
+                style={styles.messageImage}
+              />
+            ))}
+          </View>
+        ) : null}
+        {props.message.content ? (
+          <View style={styles.userBubble}>
+            <Text style={styles.userText}>{props.message.content}</Text>
+          </View>
+        ) : null}
       </View>
     );
   }
 
   return (
     <View style={styles.assistantRow}>
+      {props.message.attachments?.length ? (
+        <View style={styles.messageImageGrid}>
+          {props.message.attachments.map((attachment) => (
+            <Image
+              key={attachment.id}
+              source={{ uri: props.resolveAttachmentUrl(attachment.url) }}
+              style={styles.messageImage}
+            />
+          ))}
+        </View>
+      ) : null}
+
       {props.message.activity && !hasReasoningContent && !hasSources ? (
         <View style={styles.thinkingPill}>
           <Text style={styles.dots}>•••</Text>

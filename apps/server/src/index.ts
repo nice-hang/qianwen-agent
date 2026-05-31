@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { runAgent } from "@qianwen-agent/agent-runtime";
 import { registerChatRoutes } from "./api/chat";
+import { registerAttachmentRoutes } from "./api/attachments";
 import { registerConversationRoutes } from "./api/conversations";
 import { registerDebugRoutes } from "./api/debug";
 import { loadConfig } from "./config/env";
@@ -23,6 +24,7 @@ export function buildServer() {
     service: "qianwen-agent-server"
   }));
 
+  registerAttachmentRoutes(app, conversationRepository);
   registerConversationRoutes(app, conversationRepository);
   registerChatRoutes(app, {
     runAgent,

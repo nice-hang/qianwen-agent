@@ -256,8 +256,8 @@ Stage 5: Agent Loop 与联网搜索
 Stage 6: Agent Runtime 简化与 Tool Register
 Stage 7: Agent Trace 监控
 Stage 8: React Native 移动端
-Stage 9: 会话摘要
-Stage 10: 图片理解
+Stage 9: 图片理解
+Stage 10: 会话摘要
 ```
 
 每个阶段都尽量打通：

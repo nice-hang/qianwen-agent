@@ -59,17 +59,22 @@ Stage 7: Agent Trace 监控
 - [x] 完成 Agent Trace Viewer 第一版
 - [x] Debug Run Detail 可查看每轮 provider request 的 messages、tools、diff 和 raw JSON
 - [x] Debug Run Detail 可查看工具调用 input、output 和耗时
+- [x] 完成 Stage 9 图片理解的 Web / Server / Agent Runtime 主链路
+- [x] 建立 attachments 表和本地图片上传接口，图片保存到 `apps/server/uploads/images`
+- [x] Web composer 支持图片上传、缩略图、图文消息发送和历史图片展示
+- [x] Agent Runtime 支持把当前用户图片投影为 OpenAI-compatible multimodal input
+- [x] RN 已支持历史消息图片展示
 
 ## 进行中
 
 - [x] 已重新规划 Stage 6-10
 - [ ] 待真实 `TAVILY_API_KEY` 环境下校准模型是否按预期自动搜索
+- [ ] Stage 9 剩余：RN 原生图片选择和上传入口，需要引入 `expo-image-picker`
 
 ## 未开始
 
 - [ ] 真实联网搜索效果校准
 - [ ] 会话摘要
-- [ ] 图片理解
 
 ## 进行中
 
@@ -82,12 +87,12 @@ Stage 7: Agent Trace 监控
 - 已用真实 Qwen deep stream 验证 `reasoning_content`、TTFR 和 reasoning tokens。
 - Agent Trace Viewer 第一版已基于现有 `agent_events` raw payload 实现；后续还需要用真实搜索 run 验证 request1 -> tool -> request2 的完整链路展示。
 - Stage 8 RN 默认复用用户本机已有 Android / iOS 环境；已确认 Xcode 16.0 / iOS Simulator 可用，Android SDK / adb / emulator / system-images 存在，但当前没有 AVD 或连接设备。
-- 轻量长期记忆暂缓；会话摘要顺延到 Stage 9。
-- 本地图片上传转 base64 data URL 需要控制大小，避免超过 provider 限制，已顺延到 RN 之后。
+- 本地图片上传限制为 8MB，并在 provider_request trace 中隐藏 base64 data URL；真实图片回答还需用当前 `QWEN_MODEL` 验证。
+- 轻量长期记忆暂缓；会话摘要顺延到 Stage 10。
 - 已用真实 `DASHSCOPE_API_KEY` 验证 Stage 1 Qwen OpenAI-compatible 流式调用；本地 `.env` 已被 gitignore。
 
 ## 下一步
 
 1. 用真实搜索 run 验证 Agent Trace Viewer 的 request/tool/request 链路展示。
 2. 校准真实搜索行为：普通知识问题不搜索、时效问题会搜索。
-3. Stage 8 继续完成 Android AVD/真机验证和 iOS 真实聊天一轮验证；Stage 9 做会话摘要，Stage 10 再做图片理解。
+3. Stage 9 继续补 RN 原生图片选择上传，并用真实 `QWEN_MODEL` 验证模型基于图片回答；Stage 10 再做会话摘要。

@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
 import type {
+  ChatAttachment,
   AgentEvent,
   ChatMessage,
   ChatStreamRequest,
@@ -51,17 +53,18 @@ export function registerChatRoutes(
     await recordTrace("run_started");
 
     const messageText = request.body?.message?.trim();
-    if (!messageText) {
+    const attachmentIds = normalizeAttachmentIds(request.body?.attachmentIds);
+    if (!messageText && attachmentIds.length === 0) {
       await recordTrace("run_failed", { code: "message_required" });
       await options.traces.failRun({
         runId: run.id,
-        errorMessage: "Message is required.",
+        errorMessage: "Message or image is required.",
         ttfeMs: firstEventMs,
         ttcMs: Date.now() - runStartedMs
       });
       writeAgentEvent(reply, {
         type: "error",
-        message: "Message is required.",
+        message: "Message or image is required.",
         code: "message_required"
       });
       reply.raw.end();
@@ -99,15 +102,46 @@ export function registerChatRoutes(
         conversationId
       });
 
+      const currentAttachments = await loadAgentAttachments({
+        conversations: options.conversations,
+        attachmentIds,
+        conversationId
+      });
+      if (attachmentIds.length !== currentAttachments.length) {
+        await recordTrace("run_failed", { code: "attachment_not_found" });
+        await options.traces.failRun({
+          runId: run.id,
+          errorMessage: "Attachment not found.",
+          ttfeMs: firstEventMs,
+          ttcMs: Date.now() - runStartedMs
+        });
+        writeAgentEvent(reply, {
+          type: "error",
+          message: "Attachment not found.",
+          code: "attachment_not_found",
+          conversationId
+        });
+        reply.raw.end();
+        return reply;
+      }
+
       // 先保存用户消息，这样即使模型失败，刷新后也能恢复这轮输入。
       await options.conversations.addMessage({
         conversationId,
         role: "user",
-        content: messageText
+        content: messageText,
+        attachmentIds
       });
-      await recordTrace("user_message_saved", { conversationId });
+      await recordTrace("user_message_saved", {
+        conversationId,
+        attachmentCount: attachmentIds.length
+      });
 
       const messages = await options.conversations.listMessages(conversationId);
+      const messagesForAgent =
+        currentAttachments.length > 0
+          ? withCurrentAttachments(messages, currentAttachments)
+          : messages;
       const mode = request.body.mode === "deep" ? "deep" : "fast";
       const reasoningParts: string[] = [];
       const assistantParts: string[] = [];
@@ -124,7 +158,7 @@ export function registerChatRoutes(
       await options.runAgent(
         {
           conversationId,
-          messages,
+          messages: messagesForAgent,
           mode
         },
         {
@@ -335,4 +369,53 @@ function dedupeSources(sources: SearchSource[]): SearchSource[] | undefined {
   }
 
   return deduped.length > 0 ? deduped : undefined;
+}
+
+function normalizeAttachmentIds(input: string[] | undefined): string[] {
+  return [...new Set((input ?? []).filter((id) => typeof id === "string" && id))];
+}
+
+async function loadAgentAttachments(input: {
+  conversations: ConversationRepository;
+  attachmentIds: string[];
+  conversationId: string;
+}): Promise<ChatAttachment[]> {
+  const attachments = await input.conversations.listAttachmentsForAgent(
+    input.attachmentIds,
+    input.conversationId
+  );
+
+  return Promise.all(
+    attachments.map(async (attachment) => {
+      const bytes = await readFile(attachment.storagePath);
+      return {
+        ...attachment,
+        imageDataUrl: `data:${attachment.mimeType};base64,${bytes.toString("base64")}`
+      };
+    })
+  );
+}
+
+function withCurrentAttachments(
+  messages: ChatMessage[],
+  attachments: ChatAttachment[]
+): ChatMessage[] {
+  let lastUserMessageIndex = -1;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === "user") {
+      lastUserMessageIndex = index;
+      break;
+    }
+  }
+
+  if (lastUserMessageIndex === -1) return messages;
+
+  return messages.map((message, index) =>
+    index === lastUserMessageIndex
+      ? {
+          ...message,
+          attachments
+        }
+      : message
+  );
 }

@@ -1,11 +1,12 @@
 import type {
+  ChatAttachment,
   ChatMessage,
   Conversation,
   MessageRole,
   SearchSource
 } from "@qianwen-agent/shared";
 import type { PrismaClient } from "@prisma/client";
-import { toChatMessage, toConversation } from "./mappers";
+import { toChatAttachment, toChatMessage, toConversation } from "./mappers";
 
 export type ConversationRepository = ReturnType<typeof createConversationRepository>;
 
@@ -38,6 +39,7 @@ export function createConversationRepository(db: PrismaClient) {
   async function listMessages(conversationId: string): Promise<ChatMessage[]> {
     const messages = await db.message.findMany({
       where: { conversationId },
+      include: { attachments: true },
       orderBy: { createdAt: "asc" }
     });
 
@@ -50,20 +52,102 @@ export function createConversationRepository(db: PrismaClient) {
     content: string;
     reasoningContent?: string;
     sources?: SearchSource[];
+    attachmentIds?: string[];
     status?: "streaming" | "completed" | "failed";
   }): Promise<ChatMessage> {
-    const message = await db.message.create({
-      data: {
-        conversationId: input.conversationId,
-        role: input.role,
-        status: input.status ?? "completed",
-        content: input.content,
-        reasoningContent: input.reasoningContent,
-        sourcesJson: input.sources?.length ? JSON.stringify(input.sources) : undefined
+    const message = await db.$transaction(async (tx) => {
+      const created = await tx.message.create({
+        data: {
+          conversationId: input.conversationId,
+          role: input.role,
+          status: input.status ?? "completed",
+          content: input.content,
+          reasoningContent: input.reasoningContent,
+          sourcesJson: input.sources?.length ? JSON.stringify(input.sources) : undefined
+        }
+      });
+
+      if (input.attachmentIds?.length) {
+        await tx.attachment.updateMany({
+          where: {
+            id: { in: input.attachmentIds },
+            OR: [{ conversationId: null }, { conversationId: input.conversationId }]
+          },
+          data: {
+            conversationId: input.conversationId,
+            messageId: created.id
+          }
+        });
       }
+
+      return tx.message.findUniqueOrThrow({
+        where: { id: created.id },
+        include: { attachments: true }
+      });
     });
 
     return toChatMessage(message);
+  }
+
+  async function createImageAttachment(input: {
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    storagePath: string;
+  }): Promise<ChatAttachment> {
+    const attachment = await db.attachment.create({
+      data: {
+        fileName: input.fileName,
+        mimeType: input.mimeType,
+        sizeBytes: input.sizeBytes,
+        storagePath: input.storagePath
+      }
+    });
+
+    return toChatAttachment(attachment);
+  }
+
+  async function getAttachment(id: string): Promise<
+    | (ChatAttachment & {
+        storagePath: string;
+      })
+    | null
+  > {
+    const attachment = await db.attachment.findUnique({
+      where: { id }
+    });
+
+    return attachment
+      ? {
+          ...toChatAttachment(attachment),
+          storagePath: attachment.storagePath
+        }
+      : null;
+  }
+
+  async function listAttachmentsForAgent(
+    ids: string[],
+    conversationId: string
+  ): Promise<
+    Array<
+      ChatAttachment & {
+        storagePath: string;
+      }
+    >
+  > {
+    if (ids.length === 0) return [];
+
+    const attachments = await db.attachment.findMany({
+      where: {
+        id: { in: ids },
+        OR: [{ conversationId: null }, { conversationId }]
+      }
+    });
+
+    return attachments.map((attachment) => ({
+      ...toChatAttachment(attachment),
+      storagePath: attachment.storagePath
+    }));
   }
 
   // 更新会话时间，让最近活跃的会话排在侧边栏顶部。
@@ -80,6 +164,9 @@ export function createConversationRepository(db: PrismaClient) {
     getConversation,
     listMessages,
     addMessage,
+    createImageAttachment,
+    getAttachment,
+    listAttachmentsForAgent,
     touchConversation
   };
 }

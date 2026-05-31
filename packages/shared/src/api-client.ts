@@ -2,8 +2,10 @@ import type {
   AgentEvent,
   AgentRunSummary,
   AgentTraceEvent,
+  ChatAttachment,
   ChatMessage,
   ChatStreamRequest,
+  UploadImageRequest,
   Conversation,
   ModelUsage
 } from "./types";
@@ -21,6 +23,10 @@ export interface ConversationsResponse {
 export interface MessagesResponse {
   conversation: Conversation;
   messages: ChatMessage[];
+}
+
+export interface UploadImageResponse {
+  attachment: ChatAttachment;
 }
 
 export interface RunsResponse {
@@ -76,6 +82,20 @@ export function createApiClient(options: ApiClientOptions = {}) {
         throw new Error(`Get run failed: ${response.status}`);
       }
       return response.json() as Promise<RunDetailResponse>;
+    },
+
+    async uploadImage(request: UploadImageRequest): Promise<UploadImageResponse> {
+      const response = await fetchImpl(`${baseUrl}/api/attachments/images`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload image failed: ${response.status}`);
+      }
+
+      return response.json() as Promise<UploadImageResponse>;
     },
 
     async streamChat(

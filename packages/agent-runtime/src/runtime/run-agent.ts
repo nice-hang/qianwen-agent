@@ -5,14 +5,17 @@ import {
   type ProviderToolCall
 } from "../context/provider-messages";
 import { streamQwenText } from "../providers/qwen/client";
-import { DEFAULT_QWEN_BASE_URL, DEFAULT_QWEN_MODEL } from "../providers/qwen/constants";
+import {
+  DEFAULT_QWEN_BASE_URL,
+  DEFAULT_QWEN_MODEL
+} from "../providers/qwen/constants";
 import type { QwenTextStreamEvent } from "../providers/qwen/types";
 import { createBuiltInToolRegister } from "../tools/built-ins";
 import type { RuntimeTool, ToolContext } from "../tools/types";
 import { readProcessEnv } from "./env";
 import type { AgentRunInput, AgentRunResult, RunAgentOptions } from "./types";
 
-const MAX_TOOL_ITERATIONS = 3;
+const MAX_TOOL_ITERATIONS = 100;
 
 export async function runAgent(
   input: AgentRunInput,
@@ -24,8 +27,8 @@ export async function runAgent(
     await options.onEvent?.(event);
   };
   const mode = input.mode ?? "fast";
-  const model = env.QWEN_MODEL ?? DEFAULT_QWEN_MODEL;
   const messages = buildProviderMessages(input.messages);
+  const model = env.QWEN_MODEL ?? DEFAULT_QWEN_MODEL;
   const toolRegister = createBuiltInToolRegister();
   const toolDefinitions = toolRegister.definitions();
   const sources: SearchSource[] = [];
@@ -44,7 +47,7 @@ export async function runAgent(
       iteration,
       model,
       mode,
-      messages: cloneJson(messages),
+      messages: sanitizeProviderMessagesForTrace(messages),
       tools: cloneJson(toolDefinitions)
     });
 
@@ -278,4 +281,26 @@ function extractSearchSources(events: AgentEvent[]): SearchSource[] {
 
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function sanitizeProviderMessagesForTrace(messages: ProviderMessage[]): unknown[] {
+  return cloneJson(messages).map((message) => {
+    if (Array.isArray(message.content)) {
+      return {
+        ...message,
+        content: message.content.map((part) =>
+          part.type === "image_url"
+            ? {
+                ...part,
+                image_url: {
+                  url: "[image data url omitted]"
+                }
+              }
+            : part
+        )
+      };
+    }
+
+    return message;
+  });
 }
