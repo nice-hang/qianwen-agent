@@ -14,10 +14,25 @@ export function* parseOpenAiCompatibleChunks(
       if (!data || data === "[DONE]") continue;
 
       const chunk = JSON.parse(data) as QwenStreamChunk;
-      const reasoning = chunk.choices?.[0]?.delta?.reasoning_content;
-      const text = chunk.choices?.[0]?.delta?.content;
+      const choice = chunk.choices?.[0];
+      const reasoning = choice?.delta?.reasoning_content;
+      const text = choice?.delta?.content;
+      const toolCalls = choice?.delta?.tool_calls ?? [];
+
       if (reasoning) yield { type: "reasoning", text: reasoning };
       if (text) yield { type: "text", text };
+      for (const toolCall of toolCalls) {
+        yield {
+          type: "tool_call_delta",
+          index: toolCall.index,
+          id: toolCall.id,
+          name: toolCall.function?.name,
+          argumentsDelta: toolCall.function?.arguments
+        };
+      }
+      if (choice?.finish_reason) {
+        yield { type: "finish", reason: choice.finish_reason };
+      }
       if (chunk.usage) {
         yield { type: "usage", usage: toTokenUsage(chunk.usage, model) };
       }

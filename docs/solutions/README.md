@@ -22,7 +22,7 @@
 0004-deep-thinking.md
 0005-web-ui-qianwen-style.md
 0006-markdown-block-rendering.md
-0007-web-search.md
+0007-agent-loop-web-search.md
 0008-image-understanding.md
 0009-lightweight-memory.md
 0010-react-native-client.md

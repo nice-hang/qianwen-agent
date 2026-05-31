@@ -6,7 +6,8 @@ import {
   type AgentTraceEvent,
   type ChatMessage,
   type Conversation,
-  type ModelUsage
+  type ModelUsage,
+  type SearchSource
 } from "@qianwen-agent/shared";
 import { ChatView } from "./components/ChatView";
 import { DebugView } from "./components/DebugView";
@@ -179,6 +180,24 @@ export function App() {
       return;
     }
 
+    if (event.type === "search_results") {
+      appendAssistantSources(optimistic.assistant.id, event.sources);
+      return;
+    }
+
+    if (event.type === "tool_call_started") {
+      updateMessage(optimistic.assistant.id, {
+        activity:
+          event.toolName === "web_fetch" ? "正在打开网页..." : "正在搜索..."
+      });
+      return;
+    }
+
+    if (event.type === "tool_call_done") {
+      updateMessage(optimistic.assistant.id, { activity: undefined });
+      return;
+    }
+
     if (event.type === "done") {
       state.conversationId = event.conversationId ?? state.conversationId;
       state.assistantId = event.messageId ?? state.assistantId;
@@ -221,6 +240,16 @@ export function App() {
     );
   }
 
+  function appendAssistantSources(messageId: string, sources: SearchSource[]) {
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === messageId
+          ? { ...message, sources: dedupeSources(message.sources, sources) }
+          : message
+      )
+    );
+  }
+
   function applyDoneMessageIds(
     event: Extract<AgentEvent, { type: "done" }>,
     optimistic: OptimisticMessages,
@@ -233,7 +262,8 @@ export function App() {
             ...message,
             id: event.messageId ?? message.id,
             conversationId: state.conversationId ?? message.conversationId,
-            status: "completed"
+            status: "completed",
+            activity: undefined
           };
         }
 
@@ -363,6 +393,8 @@ function createOptimisticMessages(
       status: "completed",
       content: text,
       reasoningContent: null,
+      sources: undefined,
+      activity: undefined,
       createdAt
     },
     assistant: {
@@ -372,7 +404,26 @@ function createOptimisticMessages(
       status: "streaming",
       content: "",
       reasoningContent: "",
+      sources: undefined,
+      activity: undefined,
       createdAt
     }
   };
+}
+
+function dedupeSources(
+  current: SearchSource[] | undefined,
+  next: SearchSource[]
+): SearchSource[] {
+  const seen = new Set<string>();
+  const merged: SearchSource[] = [];
+
+  for (const source of [...(current ?? []), ...next]) {
+    const key = source.url || source.id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(source);
+  }
+
+  return merged;
 }

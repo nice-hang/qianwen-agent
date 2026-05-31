@@ -1,8 +1,28 @@
 import type { ChatMessage } from "@qianwen-agent/shared";
 
-export interface ProviderMessage {
-  role: "user" | "assistant";
-  content: string;
+export type ProviderMessage =
+  | {
+      role: "user" | "assistant" | "system";
+      content: string;
+    }
+  | {
+      role: "assistant";
+      content: string | null;
+      tool_calls: ProviderToolCall[];
+    }
+  | {
+      role: "tool";
+      tool_call_id: string;
+      content: string;
+    };
+
+export interface ProviderToolCall {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string;
+  };
 }
 
 export function buildProviderMessages(messages: ChatMessage[]): ProviderMessage[] {

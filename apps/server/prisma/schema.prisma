@@ -24,6 +24,7 @@ model Message {
   status         MessageStatus @default(completed)
   content        String
   reasoningContent String?
+  sourcesJson    String?
   createdAt      DateTime      @default(now())
 
   @@index([conversationId, createdAt])

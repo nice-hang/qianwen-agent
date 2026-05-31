@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-Stage 5: 联网搜索
+Stage 5: Agent Loop 与联网搜索
 
 ## 已完成
 
@@ -51,26 +51,27 @@ Stage 5: 联网搜索
 
 ## 进行中
 
-- [ ] 准备开始 Stage 5 联网搜索
+- [x] Stage 5 Agent Loop 基础改造已完成
+- [x] 已接入 `web_search` / `web_fetch` 内置工具和 sources 持久化
+- [ ] 待真实 `TAVILY_API_KEY` 环境下校准模型是否按预期自动搜索
 
 ## 未开始
 
-- [ ] 联网搜索
+- [ ] 真实联网搜索效果校准
 - [ ] 图片理解
 - [ ] 轻量记忆
 
 ## 已知风险
 
 - RN 的 fetch streaming 兼容性需要实际验证。
-- 千问 provider 的 `enable_search` 和搜索来源返回格式需要在真实 API 调用中校准。
+- Stage 5 已决定不优先走 Qwen OpenAI-compatible `enable_search` 作为产品主路径，因为其不稳定返回结构化 sources；先建设自建工具 loop。
 - 已用真实 Qwen deep stream 验证 `reasoning_content`、TTFR 和 reasoning tokens。
 - 本地图片上传转 base64 data URL 需要控制大小，避免超过 provider 限制。
 - 已用真实 `DASHSCOPE_API_KEY` 验证 Stage 1 Qwen OpenAI-compatible 流式调用；本地 `.env` 已被 gitignore。
 
 ## 下一步
 
-1. 编写 Stage 5 联网搜索方案。
-2. 在请求协议中加入 `search: auto | off | force`。
-3. 调研并接入 Qwen `enable_search` / `search_options`。
-4. Web 按当前 MarkdownRenderer 和千问风格补充搜索入口、搜索状态和来源展示。
-5. Debug 记录搜索配置与相关 usage。
+1. 配置真实 `TAVILY_API_KEY` 后校准 Qwen tool calling 行为。
+2. 手工验证普通知识问题不搜索、时效问题会搜索。
+3. 继续打磨来源 drawer 的移动端截图。
+4. 评估是否继续使用 Tavily，或切换到 Brave/Bing/国内搜索服务。

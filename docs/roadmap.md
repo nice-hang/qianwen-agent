@@ -133,22 +133,30 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [x] 表格不会撑破消息列或移动端 viewport
 - [x] 不改 Qwen system prompt，不改消息存储结构
 
-## Stage 5: 联网搜索
+## Stage 5: Agent Loop 与联网搜索
 
-目标：优先使用千问 provider 内置搜索能力。
+目标：先把 Agent Runtime 升级为模型可自主调用工具的轻量 agent loop，再接入自建联网搜索工具。
 
-- [ ] 支持 `search: auto | off | force`
-- [ ] 接入 `enable_search`
-- [ ] 接入 `search_options`
-- [ ] 输出搜索过程事件
-- [ ] 如果 provider 返回来源，展示来源列表
-- [ ] Debug 记录 search 配置和搜索相关 usage
+- [x] Agent Runtime 支持轻量 agent loop
+- [x] Qwen provider 支持 tool calling stream
+- [x] 新增工具事件协议
+- [x] 新增 `web_search` 工具
+- [x] 新增 `web_fetch` 工具
+- [x] 模型自主决定是否搜索
+- [x] 输出搜索过程事件
+- [x] Web 展示搜索状态和来源 chip
+- [x] Web 支持来源右侧栏
+- [x] assistant message 持久化 `sourcesJson`
+- [x] Debug 记录工具调用、搜索 query、来源和耗时
 
 验收：
 
-- [ ] 用户能开启/关闭联网搜索
-- [ ] 搜索状态能在前端展示
-- [ ] 有来源时能展示来源数量和列表
+- [x] UI 不需要搜索开关，模型能自动判断是否搜索
+- [x] 搜索状态能在前端展示
+- [x] 有来源时能展示来源数量和列表
+- [x] 刷新页面后来源 chip 和来源列表仍可恢复
+- [ ] 普通知识问题不搜索，时效问题会搜索
+- [x] 工具调用完成后才开始输出最终 answer token
 
 ## Stage 6: 图片理解
 

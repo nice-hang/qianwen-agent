@@ -9,6 +9,8 @@ export interface ChatMessage {
   status: MessageStatus;
   content: string;
   reasoningContent?: string | null;
+  sources?: SearchSource[];
+  activity?: string;
   createdAt: string;
 }
 
@@ -21,6 +23,24 @@ export interface Conversation {
 }
 
 export type AgentEvent =
+  | {
+      type: "tool_call_started";
+      toolName: string;
+      toolCallId: string;
+      input?: unknown;
+    }
+  | {
+      type: "tool_call_done";
+      toolName: string;
+      toolCallId: string;
+      output?: unknown;
+    }
+  | {
+      type: "search_results";
+      toolCallId: string;
+      query: string;
+      sources: SearchSource[];
+    }
   | { type: "reasoning_delta"; text: string }
   | { type: "answer_delta"; text: string }
   | {
@@ -36,6 +56,15 @@ export interface ChatStreamRequest {
   conversationId?: string;
   message: string;
   mode?: "fast" | "deep";
+}
+
+export interface SearchSource {
+  id: string;
+  title: string;
+  url: string;
+  snippet?: string;
+  siteName?: string;
+  publishedAt?: string;
 }
 
 export interface AgentRunSummary {

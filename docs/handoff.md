@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-准备进入 Stage 5：联网搜索。
+准备进入 Stage 5：Agent Loop 与联网搜索。
 
 ## 当前状态
 
@@ -28,6 +28,9 @@
 - Stage 4 已完成：前端 Markdown 区块渲染优化，不改 Qwen system prompt，不改消息存储结构。
 - Stage 4 已接入 `react-markdown` 和 `remark-gfm`，assistant content 和 reasoningContent 均使用 MarkdownRenderer。
 - Stage 4 已实现 CodeBlock、TableBlock、inline code、heading、list、blockquote、link、hr 等渲染样式。
+- Stage 5 方案已确定：先做轻量 Agent Loop，再接自建 `web_search` / `web_fetch` 工具；不优先用 Qwen OpenAI-compatible `enable_search` 做产品主路径。
+- Stage 5 Agent Loop 基础改造已实现：Qwen tool-call stream、内置工具表、sources 持久化、Web 来源 chip / drawer 均已接入。
+- `web_search` 第一版使用 `TAVILY_API_KEY` 调 Tavily；未配置时返回空 sources 和明确 note，loop 仍可继续。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -44,7 +47,11 @@
 - 深度思考优先使用千问 provider 的 `enable_thinking`。
 - 深度思考内容保存到 assistant message 的 `reasoningContent`，不单独建 thinking 表。
 - MarkdownRenderer 使用 Markdown 原生能力渲染标题、列表、代码块、表格、引用和链接。
-- 联网搜索优先使用千问 provider 的 `enable_search`，当前进入 Stage 5。
+- Stage 5 不优先使用千问 provider 的 `enable_search` 作为产品主路径，因为 OpenAI-compatible Chat Completions 无法稳定返回结构化 sources。
+- 是否搜索由模型通过 tool calling 自主决定，不由前端传 search 开关，也不由 runtime 关键词规则决定。
+- Agent Loop 第一版保持函数式 orchestration，不引入 Runtime class、LangGraph 或复杂 ToolRegistry class。
+- 图片理解后续走 multimodal input / provider message projection，不作为 Stage 5 工具扩展示例。
+- 搜索来源第一版直接持久化到 assistant message 的 `sourcesJson`，不先建 `message_sources` 表。
 - Web UI 优化参考国内版千问，不直接复制商标、官方图形资源或未实现能力入口。
 - 图片 MVP 存本地 uploads，调用模型时临时转 base64 data URL。
 - 可观测 MVP 只做 run trace、性能指标和 token usage，不做产品运营大盘。
@@ -66,11 +73,10 @@
 
 ## 下一步建议
 
-1. 创建 Stage 5 solution：联网搜索。
-2. 明确 `search: auto | off | force` 的默认行为。
-3. 接入 Qwen `enable_search` / `search_options`。
-4. 按当前千问风格和 MarkdownRenderer 补充搜索入口、搜索状态和来源展示。
-5. 增加 Debug 搜索配置记录。
+1. 配置真实 `TAVILY_API_KEY` 后校准 Qwen 是否能稳定自主调用 `web_search`。
+2. 手工验证普通知识问题不搜索、时效问题会搜索。
+3. 继续补来源 drawer 移动端截图和视觉调整。
+4. 评估 Tavily 中文搜索质量，必要时切换 Brave/Bing/国内搜索服务。
 
 ## 阻塞项
 

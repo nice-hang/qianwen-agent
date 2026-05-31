@@ -5,7 +5,7 @@
   display: grid;
   grid-template-columns: 256px minmax(0, 1fr);
   overflow: hidden;
-  background: #ffffff;
+  background: #f7f7f9;
 }
 
 .sidebar {
@@ -16,8 +16,7 @@
   flex-direction: column;
   gap: 14px;
   padding: 18px 12px;
-  background: #f7f7f5;
-  border-right: 1px solid #eeeeeb;
+  background: #f7f7f9;
   overflow: hidden;
 }
 
@@ -49,7 +48,7 @@
 
 .debug-link:hover,
 .conversation-list button:hover {
-  background: #eeeeeb;
+  background: #eeeeef;
 }
 
 .new-chat {
@@ -89,7 +88,7 @@
 }
 
 .conversation-list button.active {
-  background: #ececea;
+  background: #eeeeef;
   color: #111111;
   font-weight: 650;
 }
@@ -111,7 +110,7 @@
 
 .debug-link.active {
   color: #111111;
-  background: #ececea;
+  background: #eeeeef;
 }
 
 @media (max-width: 760px) {

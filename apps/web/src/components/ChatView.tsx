@@ -1,5 +1,11 @@
-import { useState, type FormEvent } from "react";
-import type { ChatMessage, Conversation } from "@qianwen-agent/shared";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent
+} from "react";
+import type { ChatMessage, Conversation, SearchSource } from "@qianwen-agent/shared";
 import { MarkdownRenderer } from "./markdown/MarkdownRenderer";
 import "./ChatView.css";
 
@@ -17,6 +23,10 @@ interface ChatViewProps {
 
 export function ChatView(props: ChatViewProps) {
   const isEmpty = props.messages.length === 0;
+  const [sourceDrawer, setSourceDrawer] = useState<{
+    title: string;
+    sources: SearchSource[];
+  }>();
 
   return (
     <section className={isEmpty ? "chat-panel empty" : "chat-panel"}>
@@ -35,10 +45,27 @@ export function ChatView(props: ChatViewProps) {
           </div>
         ) : (
           props.messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble
+              key={message.id}
+              message={message}
+              onOpenSources={(sources) =>
+                setSourceDrawer({
+                  title: `参考了 ${sources.length} 篇结果`,
+                  sources
+                })
+              }
+            />
           ))
         )}
       </div>
+
+      {sourceDrawer ? (
+        <SourceDrawer
+          sources={sourceDrawer.sources}
+          title={sourceDrawer.title}
+          onClose={() => setSourceDrawer(undefined)}
+        />
+      ) : null}
 
       {props.error ? <div className="error">{props.error}</div> : null}
 
@@ -46,6 +73,7 @@ export function ChatView(props: ChatViewProps) {
         <textarea
           value={props.draft}
           onChange={(event) => props.onDraftChange(event.target.value)}
+          onKeyDown={handleComposerKeyDown}
           placeholder="向千问提问"
           rows={3}
         />
@@ -80,28 +108,69 @@ export function ChatView(props: ChatViewProps) {
       </form>
     </section>
   );
+
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  }
 }
 
-function MessageBubble(props: { message: ChatMessage }) {
+function MessageBubble(props: {
+  message: ChatMessage;
+  onOpenSources: (sources: SearchSource[]) => void;
+}) {
   const { message } = props;
+  const sources = message.sources ?? [];
+  const hasReasoning = Boolean(message.reasoningContent);
+  const placeholder =
+    message.status === "streaming" && !hasReasoning
+      ? message.activity ?? "正在生成..."
+      : "";
 
   return (
     <article className={`bubble ${message.role}`}>
-      {message.reasoningContent ? (
+      {hasReasoning ? (
         <ThinkingBlock message={message} />
       ) : null}
       {message.content ? (
         <MarkdownRenderer content={message.content} />
       ) : (
-        <p>{message.status === "streaming" ? "正在生成..." : ""}</p>
+        <p>{placeholder}</p>
       )}
+      {message.role === "assistant" && sources.length > 0 ? (
+        <button
+          className="source-chip"
+          type="button"
+          onClick={() => props.onOpenSources(sources)}
+        >
+          <span>参考了 {sources.length} 篇结果</span>
+          <span aria-hidden="true">›</span>
+        </button>
+      ) : null}
     </article>
   );
 }
 
 function ThinkingBlock(props: { message: ChatMessage }) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const isStreaming = props.message.status === "streaming";
+  const isAnswering = props.message.content.length > 0;
+  const shouldAutoExpand = isStreaming && !isAnswering;
+  const [isExpanded, setIsExpanded] = useState(shouldAutoExpand);
+  const userToggledRef = useRef(false);
+
+  useEffect(() => {
+    if (userToggledRef.current) return;
+    setIsExpanded(shouldAutoExpand);
+  }, [shouldAutoExpand]);
+
+  function toggleThinking() {
+    userToggledRef.current = true;
+    setIsExpanded((value) => !value);
+  }
 
   return (
     <div className="thinking-block">
@@ -109,22 +178,59 @@ function ThinkingBlock(props: { message: ChatMessage }) {
         className="thinking-toggle"
         type="button"
         aria-expanded={isExpanded}
-        onClick={() => setIsExpanded((value) => !value)}
+        onClick={toggleThinking}
       >
-        <span>{isStreaming ? "正在深度思考" : "深度思考已完成"}</span>
+        <span>{isStreaming ? "正在思考中" : "深度思考已完成"}</span>
         <span
           className={isExpanded ? "thinking-chevron expanded" : "thinking-chevron"}
           aria-hidden="true"
         >
-          {isExpanded ? "⌄" : "›"}
+          ›
         </span>
       </button>
 
-      {isExpanded ? (
-        <div className="thinking-content">
+      <div
+        className={isExpanded ? "thinking-content expanded" : "thinking-content"}
+      >
+        <div className="thinking-content-inner">
           <MarkdownRenderer content={props.message.reasoningContent ?? ""} />
         </div>
-      ) : null}
+      </div>
     </div>
+  );
+}
+
+function SourceDrawer(props: {
+  title: string;
+  sources: SearchSource[];
+  onClose: () => void;
+}) {
+  return (
+    <aside className="source-drawer" aria-label="Search sources">
+      <div className="source-drawer-header">
+        <strong>{props.title}</strong>
+        <button type="button" onClick={props.onClose} aria-label="Close sources">
+          ×
+        </button>
+      </div>
+      <div className="source-list">
+        {props.sources.map((source, index) => (
+          <a
+            className="source-item"
+            href={source.url}
+            key={`${source.url}-${index}`}
+            rel="noreferrer"
+            target="_blank"
+          >
+            <span className="source-index">{index + 1}</span>
+            <span className="source-main">
+              <strong>{source.title}</strong>
+              <span>{source.siteName ?? source.url}</span>
+              {source.snippet ? <p>{source.snippet}</p> : null}
+            </span>
+          </a>
+        ))}
+      </div>
+    </aside>
   );
 }

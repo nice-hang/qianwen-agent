@@ -1,4 +1,9 @@
-import type { ChatMessage, Conversation, MessageRole } from "@qianwen-agent/shared";
+import type {
+  ChatMessage,
+  Conversation,
+  MessageRole,
+  SearchSource
+} from "@qianwen-agent/shared";
 import type { PrismaClient } from "@prisma/client";
 import { toChatMessage, toConversation } from "./mappers";
 
@@ -44,6 +49,7 @@ export function createConversationRepository(db: PrismaClient) {
     role: MessageRole;
     content: string;
     reasoningContent?: string;
+    sources?: SearchSource[];
     status?: "streaming" | "completed" | "failed";
   }): Promise<ChatMessage> {
     const message = await db.message.create({
@@ -52,7 +58,8 @@ export function createConversationRepository(db: PrismaClient) {
         role: input.role,
         status: input.status ?? "completed",
         content: input.content,
-        reasoningContent: input.reasoningContent
+        reasoningContent: input.reasoningContent,
+        sourcesJson: input.sources?.length ? JSON.stringify(input.sources) : undefined
       }
     });
 

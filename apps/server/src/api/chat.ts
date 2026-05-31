@@ -1,5 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import type { ChatMessage, ChatStreamRequest } from "@qianwen-agent/shared";
+import type {
+  ChatMessage,
+  ChatStreamRequest,
+  SearchSource
+} from "@qianwen-agent/shared";
 import type { runAgent } from "@qianwen-agent/agent-runtime";
 import type { ConversationRepository } from "../storage/conversation-repository";
 import type { TraceRepository } from "../storage/trace-repository";
@@ -105,6 +109,7 @@ export function registerChatRoutes(
       const mode = request.body.mode === "deep" ? "deep" : "fast";
       const reasoningParts: string[] = [];
       const assistantParts: string[] = [];
+      const searchSources: SearchSource[] = [];
       let assistantMessage: ChatMessage | null = null;
 
       providerStartedMs = Date.now();
@@ -138,6 +143,30 @@ export function registerChatRoutes(
           continue;
         }
 
+        if (event.type === "tool_call_started") {
+          await recordTrace("tool_call_started", event);
+          writeAgentEvent(reply, event);
+          continue;
+        }
+
+        if (event.type === "tool_call_done") {
+          await recordTrace("tool_call_done", event);
+          writeAgentEvent(reply, event);
+          continue;
+        }
+
+        if (event.type === "search_results") {
+          await recordTrace("search_results", {
+            toolCallId: event.toolCallId,
+            query: event.query,
+            sourcesCount: event.sources.length,
+            sources: event.sources
+          });
+          searchSources.push(...event.sources);
+          writeAgentEvent(reply, event);
+          continue;
+        }
+
         if (event.type === "done") {
           providerDoneMs = Date.now();
           // Runtime 不知道数据库 id，所以由 Server 保存后替换 messageId。
@@ -150,6 +179,7 @@ export function registerChatRoutes(
             role: "assistant",
             content: assistantContent,
             reasoningContent: reasoningParts.join("") || undefined,
+            sources: dedupeSources(searchSources),
             status: assistantContent ? "completed" : "failed"
           });
           await options.conversations.touchConversation(conversation.id);
@@ -188,7 +218,8 @@ export function registerChatRoutes(
           conversationId: conversation.id,
           role: "assistant",
           content: assistantParts.join(""),
-          reasoningContent: reasoningParts.join("") || undefined
+          reasoningContent: reasoningParts.join("") || undefined,
+          sources: dedupeSources(searchSources)
         });
         await options.conversations.touchConversation(conversation.id);
         await recordTrace("assistant_message_saved", {
@@ -248,4 +279,18 @@ function normalizeConversationTitle(title: string): string {
 
   if (!normalized) return "New chat";
   return normalized.length > 40 ? `${normalized.slice(0, 40)}...` : normalized;
+}
+
+function dedupeSources(sources: SearchSource[]): SearchSource[] | undefined {
+  const seen = new Set<string>();
+  const deduped: SearchSource[] = [];
+
+  for (const source of sources) {
+    const key = source.url || source.id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(source);
+  }
+
+  return deduped.length > 0 ? deduped : undefined;
 }
