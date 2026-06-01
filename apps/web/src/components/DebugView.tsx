@@ -769,12 +769,20 @@ function isSearchResults(input: unknown): input is SearchResultsEvent {
 
 function reasoningTextFromEvent(event: AgentTraceEvent): string[] {
   const data = asRecord(event.data);
-  return data.type === "reasoning_delta" && typeof data.text === "string" ? [data.text] : [];
+  if (data.type === "reasoning_delta" && typeof data.text === "string") return [data.text];
+  if (event.type === "assistant_message_saved" && typeof data.reasoningContent === "string") {
+    return [data.reasoningContent];
+  }
+  return [];
 }
 
 function answerTextFromEvent(event: AgentTraceEvent): string[] {
   const data = asRecord(event.data);
-  return data.type === "answer_delta" && typeof data.text === "string" ? [data.text] : [];
+  if (data.type === "answer_delta" && typeof data.text === "string") return [data.text];
+  if (event.type === "assistant_message_saved" && typeof data.content === "string") {
+    return [data.content];
+  }
+  return [];
 }
 
 function asRecord(input: unknown): Record<string, any> {

@@ -43,16 +43,12 @@ export function ChatView(props: ChatViewProps) {
     <section className={isEmpty ? "chat-panel empty" : "chat-panel"}>
       <header className="chat-header">
         <div className="model-select">Qwen3.6 - 千问</div>
-        <span className={props.isSending ? "status streaming" : "status"}>
-          {props.isSending ? "正在回答" : "就绪"}
-        </span>
       </header>
 
       <div className="messages" aria-live="polite">
         {props.messages.length === 0 ? (
           <div className="empty-state">
-            <h1>有什么可以帮忙的？</h1>
-            <p>支持多轮对话、流式回答和深度思考。</p>
+            <h1>你好，我是千问</h1>
           </div>
         ) : (
           props.messages.map((message) => (
@@ -142,22 +138,17 @@ export function ChatView(props: ChatViewProps) {
                 {isUploadMenuOpen ? <CloseIcon /> : <PlusIcon />}
               </button>
             </div>
-            <div className="mode-switch" aria-label="Chat mode">
-              <button
-                className={props.mode === "fast" ? "active" : undefined}
-                type="button"
-                onClick={() => props.onModeChange("fast")}
-              >
-                快速
-              </button>
-              <button
-                className={props.mode === "deep" ? "active" : undefined}
-                type="button"
-                onClick={() => props.onModeChange("deep")}
-              >
-                思考
-              </button>
-            </div>
+            <button
+              className={props.mode === "deep" ? "thinking-mode active" : "thinking-mode"}
+              type="button"
+              aria-pressed={props.mode === "deep"}
+              onClick={() =>
+                props.onModeChange(props.mode === "deep" ? "fast" : "deep")
+              }
+            >
+              <ThinkingModeIcon />
+              <span>思考</span>
+            </button>
           </div>
           <button
             className="send-button"
@@ -449,6 +440,30 @@ function ImageUploadIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
+function ThinkingModeIcon() {
+  return (
+    <svg
+      className="thinking-mode-icon"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M9.7 2.9 8.15 7.2 3.85 8.75l4.3 1.55 1.55 4.3 1.55-4.3 4.3-1.55-4.3-1.55L9.7 2.9Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.35"
+      />
+      <path
+        d="m15.45 12.2-.55 1.5-1.5.55 1.5.55.55 1.5.55-1.5 1.5-.55-1.5-.55-.55-1.5Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.2"
       />
     </svg>
   );

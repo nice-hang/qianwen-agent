@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import type { ChatMessage, SearchSource } from "@qianwen-agent/shared";
+import { AttachmentChip } from "./AttachmentChip";
 import { MarkdownText } from "../markdown/MarkdownText";
 import { styles } from "../styles";
 
@@ -27,10 +28,10 @@ export function MessageBubble(props: MessageBubbleProps) {
         {props.message.attachments?.length ? (
           <View style={styles.messageImageGrid}>
             {props.message.attachments.map((attachment) => (
-              <Image
+              <AttachmentChip
+                attachment={attachment}
                 key={attachment.id}
-                source={{ uri: props.resolveAttachmentUrl(attachment.url) }}
-                style={styles.messageImage}
+                resolveAttachmentUrl={props.resolveAttachmentUrl}
               />
             ))}
           </View>
@@ -49,10 +50,10 @@ export function MessageBubble(props: MessageBubbleProps) {
       {props.message.attachments?.length ? (
         <View style={styles.messageImageGrid}>
           {props.message.attachments.map((attachment) => (
-            <Image
+            <AttachmentChip
+              attachment={attachment}
               key={attachment.id}
-              source={{ uri: props.resolveAttachmentUrl(attachment.url) }}
-              style={styles.messageImage}
+              resolveAttachmentUrl={props.resolveAttachmentUrl}
             />
           ))}
         </View>

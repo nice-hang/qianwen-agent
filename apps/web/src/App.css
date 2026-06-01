@@ -51,6 +51,14 @@
   background: #eeeeef;
 }
 
+.brand:focus-visible,
+.new-chat:focus-visible,
+.conversation-list button:focus-visible,
+.debug-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(112, 105, 255, 0.16);
+}
+
 .new-chat {
   min-height: 40px;
   margin: 4px 0 2px;

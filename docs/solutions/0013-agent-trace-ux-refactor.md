@@ -50,24 +50,21 @@ Implemented
 第一屏只保留这些指标：
 
 1. **总耗时 TTC**
-   - 中文：总完成耗时
-   - 含义：从请求开始到回答完成的总时间。
-   - 面试关注点：用户体感速度，端到端链路是否可控。
-
+  - 中文：总完成耗时
+  - 含义：从请求开始到回答完成的总时间。
+  - 面试关注点：用户体感速度，端到端链路是否可控。
 2. **首字时间 TTFA**
-   - 中文：首个回答字耗时
-   - 含义：用户多久看到第一个正式回答 token。
-   - 面试关注点：流式体验是否好，是否被工具/RAG/思考拖慢。
-
+  - 中文：首个回答字耗时
+  - 含义：用户多久看到第一个正式回答 token。
+  - 面试关注点：流式体验是否好，是否被工具/RAG/思考拖慢。
 3. **模型耗时 Provider Latency**
-   - 中文：模型请求耗时
-   - 含义：provider request 到 provider response 的耗时。
-   - 面试关注点：慢在模型还是慢在本地 RAG / 工具。
-
+  - 中文：模型请求耗时
+  - 含义：provider request 到 provider response 的耗时。
+  - 面试关注点：慢在模型还是慢在本地 RAG / 工具。
 4. **Token 用量**
-   - 中文：总 Token
-   - 含义：本轮模型总 token 消耗。
-   - 面试关注点：成本、上下文膨胀、深度思考开销。
+  - 中文：总 Token
+  - 含义：本轮模型总 token 消耗。
+  - 面试关注点：成本、上下文膨胀、深度思考开销。
 
 TTFE、TTFR、工具调用、文件 RAG 命中等信息不再放顶部指标区，改到逐轮模型审计、工具专区、RAG 专区或原始事件里查看。
 
@@ -175,18 +172,18 @@ TTFA · 流式体感
 
 ## 实现计划
 
-- [x] 梳理现有 trace event 类型，定义前端聚合模型 `RunTraceSummary`。
-- [x] 在 Web DebugView 内新增 run 总览 header 和核心指标卡片。
-- [x] 顶部指标收敛为 TTC / TTFA / Provider Latency / Total Token 四项，并缩短解释文案。
-- [x] 移除阶段化“执行过程”模块，避免第一屏信息过载。
-- [x] 重做 Provider Request 面板，按模型请求轮次展示 messages、tools、response、SSE 事件和完整 JSON。
-- [x] 支持每轮 request 的 cURL / 请求 JSON / 对比上次。
-- [x] 将 tool call 与 provider request 轮次关联，展示 arguments、raw output、summary、sources、duration 和 error。
-- [x] 新增 RAG 命中专区：展示 query、chunk、score、注入字符数和耗时。
-- [x] 新增工具调用专区：展示参数、耗时、结果摘要和错误。
-- [x] 保留 raw JSON 折叠入口，作为调试兜底。
-- [x] 用普通聊天、深度思考、文件 RAG 历史 run 验证 trace 聚合展示。
-- [x] 用 desktop 截图检查第一屏是否能直观看到核心链路。
+- 梳理现有 trace event 类型，定义前端聚合模型 `RunTraceSummary`。
+- 在 Web DebugView 内新增 run 总览 header 和核心指标卡片。
+- 顶部指标收敛为 TTC / TTFA / Provider Latency / Total Token 四项，并缩短解释文案。
+- 移除阶段化“执行过程”模块，避免第一屏信息过载。
+- 重做 Provider Request 面板，按模型请求轮次展示 messages、tools、response、SSE 事件和完整 JSON。
+- 支持每轮 request 的 cURL / 请求 JSON / 对比上次。
+- 将 tool call 与 provider request 轮次关联，展示 arguments、raw output、summary、sources、duration 和 error。
+- 新增 RAG 命中专区：展示 query、chunk、score、注入字符数和耗时。
+- 新增工具调用专区：展示参数、耗时、结果摘要和错误。
+- 保留 raw JSON 折叠入口，作为调试兜底。
+- 用普通聊天、深度思考、文件 RAG 历史 run 验证 trace 聚合展示。
+- 用 desktop 截图检查第一屏是否能直观看到核心链路。
 
 ## 实现记录
 

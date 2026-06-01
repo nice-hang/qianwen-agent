@@ -241,7 +241,8 @@ export const styles = StyleSheet.create({
   },
   composerWrap: {
     paddingHorizontal: 22,
-    paddingBottom: Platform.OS === "android" ? 18 : 8
+    paddingBottom: Platform.OS === "android" ? 18 : 8,
+    position: "relative"
   },
   attachmentStrip: {
     marginBottom: 8,
@@ -273,8 +274,97 @@ export const styles = StyleSheet.create({
   },
   attachmentRemoveText: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 14,
     lineHeight: 19
+  },
+  filePreviewChip: {
+    position: "relative",
+    width: 176,
+    minHeight: 70,
+    padding: 10,
+    paddingRight: 34,
+    borderWidth: 1,
+    borderColor: "#ececec",
+    borderRadius: 14,
+    backgroundColor: "#f8f8f8",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10
+  },
+  messageFileChip: {
+    maxWidth: 260,
+    minHeight: 62,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#ececec",
+    borderRadius: 14,
+    backgroundColor: "#ffffff",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10
+  },
+  fileIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eef7ff"
+  },
+  fileIconText: {
+    color: "#2b6cb0",
+    fontSize: 16,
+    fontWeight: "700"
+  },
+  fileTextBlock: {
+    flex: 1,
+    minWidth: 0
+  },
+  fileName: {
+    color: "#202124",
+    fontSize: 14,
+    fontWeight: "600"
+  },
+  fileMeta: {
+    marginTop: 3,
+    color: "#8a8a8a",
+    fontSize: 12
+  },
+  uploadMenu: {
+    alignSelf: "flex-start",
+    marginBottom: 8,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: "#eeeeee",
+    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    gap: 4
+  },
+  uploadMenuItem: {
+    minWidth: 148,
+    minHeight: 42,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9
+  },
+  uploadMenuIcon: {
+    width: 24,
+    color: "#202124",
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "center"
+  },
+  uploadMenuText: {
+    color: "#202124",
+    fontSize: 15,
+    fontWeight: "500"
   },
   composer: {
     minHeight: 58,
@@ -304,6 +394,7 @@ export const styles = StyleSheet.create({
   imagePickText: {
     color: "#202124",
     fontSize: 26,
+    fontWeight: "700",
     lineHeight: 30
   },
   input: {

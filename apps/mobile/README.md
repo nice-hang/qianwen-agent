@@ -13,8 +13,9 @@ pnpm --filter @qianwen-agent/mobile ios
 ```
 
 `pnpm --filter @qianwen-agent/mobile android` starts a standalone Android emulator when no
-device is connected, configures `adb reverse` for Metro, and opens Expo Go. Set
-`ANDROID_AVD=Medium_Phone` to choose a specific emulator, or `EXPO_PORT=8082` to use a
-different Metro port.
+device is connected, waits for Metro to become ready, then opens Expo Go with the emulator
+host address. Set `ANDROID_AVD=Medium_Phone` to choose a specific emulator, `EXPO_PORT=8082`
+to use a different Metro port, or `EXPO_HOST=<your-lan-ip>` when testing on a physical
+Android device.
 
 The mobile app uses `http://10.0.2.2:3001` on Android emulator and `http://localhost:3001` on iOS simulator by default.

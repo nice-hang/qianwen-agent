@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as DocumentPicker from "expo-document-picker";
 import { fetch as expoFetch } from "expo/fetch";
+import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
@@ -31,6 +33,14 @@ const api = createApiClient({
   fetchImpl: expoFetch as typeof fetch
 });
 const MAX_UPLOAD_IMAGE_BYTES = 7 * 1024 * 1024;
+const MAX_UPLOAD_FILE_BYTES = 12 * 1024 * 1024;
+const SUPPORTED_FILE_TYPES = [
+  "text/plain",
+  "text/markdown",
+  "text/csv",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+];
 const UPLOAD_IMAGE_ATTEMPTS = [
   { maxEdge: 1600, quality: 0.72 },
   { maxEdge: 1280, quality: 0.62 },
@@ -49,11 +59,6 @@ export default function App() {
   const [activeSources, setActiveSources] = useState<SearchSource[]>([]);
   const [error, setError] = useState<string>();
   const scrollRef = useRef<ScrollView>(null);
-
-  const activeConversation = useMemo(
-    () => conversations.find((conversation) => conversation.id === activeConversationId),
-    [activeConversationId, conversations]
-  );
 
   useEffect(() => {
     void loadConversations();
@@ -298,6 +303,56 @@ export default function App() {
     }
   }
 
+  async function pickFile() {
+    if (isSending) return;
+
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: SUPPORTED_FILE_TYPES
+      });
+
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset?.uri) {
+        setError("文件读取失败，请重新选择");
+        return;
+      }
+
+      if (asset.size && asset.size > MAX_UPLOAD_FILE_BYTES) {
+        setError("文件过大，请选择 12MB 以内的文件");
+        return;
+      }
+
+      const fileName = asset.name || "document.txt";
+      const mimeType = normalizeFileMimeType(fileName, asset.mimeType);
+      if (!SUPPORTED_FILE_TYPES.includes(mimeType)) {
+        setError("暂只支持 txt、md、csv、pdf、docx 文件");
+        return;
+      }
+
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64
+      });
+      if (estimateBase64Bytes(base64) > MAX_UPLOAD_FILE_BYTES) {
+        setError("文件过大，请选择 12MB 以内的文件");
+        return;
+      }
+
+      const response = await api.uploadFile({
+        conversationId: activeConversationId,
+        fileName,
+        mimeType,
+        dataUrl: `data:${mimeType};base64,${base64}`
+      });
+
+      setAttachments((current) => [...current, response.attachment]);
+    } catch (cause) {
+      setError(readError(cause));
+    }
+  }
+
   return (
     <SafeAreaView style={styles.shell}>
       <KeyboardAvoidingView
@@ -310,7 +365,7 @@ export default function App() {
               <Text style={styles.topIcon}>☰</Text>
             </Pressable>
             <Text numberOfLines={1} style={styles.title}>
-              {activeConversation?.title ?? "千问"}
+              千问
             </Text>
             <View style={styles.topSpacer} />
           </View>
@@ -343,6 +398,7 @@ export default function App() {
             draft={draft}
             isSending={isSending}
             onChangeDraft={setDraft}
+            onPickFile={() => void pickFile()}
             onPickImage={() => void pickImage()}
             onRemoveAttachment={(attachmentId) =>
               setAttachments((current) =>
@@ -419,4 +475,21 @@ function buildResizeAction(
 function estimateBase64Bytes(base64: string): number {
   const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
   return Math.floor((base64.length * 3) / 4) - padding;
+}
+
+function normalizeFileMimeType(fileName: string, mimeType: string | undefined): string {
+  if (mimeType && SUPPORTED_FILE_TYPES.includes(mimeType)) return mimeType;
+  return mimeTypeFromFileName(fileName);
+}
+
+function mimeTypeFromFileName(fileName: string): string {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".txt")) return "text/plain";
+  if (lower.endsWith(".md")) return "text/markdown";
+  if (lower.endsWith(".csv")) return "text/csv";
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".docx")) {
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  }
+  return "application/octet-stream";
 }

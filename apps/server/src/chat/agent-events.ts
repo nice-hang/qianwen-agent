@@ -110,7 +110,9 @@ export function createChatAgentEventHandler(input: {
       });
       await input.conversations.touchConversation(input.conversationId);
       await input.recordTrace("assistant_message_saved", {
-        messageId: state.assistantMessage.id
+        messageId: state.assistantMessage.id,
+        content: assistantContent,
+        reasoningContent: state.reasoningParts.join("") || undefined
       });
       await completeRun();
       await input.recordTrace("run_completed");
@@ -167,7 +169,9 @@ export function createChatAgentEventHandler(input: {
     });
     await input.conversations.touchConversation(input.conversationId);
     await input.recordTrace("assistant_message_saved", {
-      messageId: state.assistantMessage.id
+      messageId: state.assistantMessage.id,
+      content: state.assistantParts.join(""),
+      reasoningContent: state.reasoningParts.join("") || undefined
     });
     await completeRun();
     await input.recordTrace("run_completed");
