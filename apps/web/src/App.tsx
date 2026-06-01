@@ -23,7 +23,9 @@ const api = createApiClient({
 export function App() {
   const [view, setView] = useState<"chat" | "debug">("chat");
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string>();
+  const [activeConversationId, setActiveConversationId] = useState<string | undefined>(
+    getConversationIdFromLocation()
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [runs, setRuns] = useState<AgentRunSummary[]>([]);
   const [activeRunId, setActiveRunId] = useState<string>();
@@ -44,8 +46,18 @@ export function App() {
   );
 
   useEffect(() => {
-    // 首次加载恢复侧边栏，并默认选中最近会话。
+    // 首次加载恢复侧边栏；是否进入会话只由 URL query 决定。
     void loadConversations();
+  }, []);
+
+  useEffect(() => {
+    function handlePopState() {
+      setActiveConversationId(getConversationIdFromLocation());
+      setView("chat");
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   useEffect(() => {
@@ -88,10 +100,6 @@ export function App() {
     if (!response) return;
 
     setConversations(response.conversations);
-    setActiveConversationId((current) => {
-      if (current) return current;
-      return response.conversations[0]?.id;
-    });
   }
 
   async function loadMessages(conversationId: string) {
@@ -100,7 +108,7 @@ export function App() {
   }
 
   async function startNewChat() {
-    setActiveConversationId(undefined);
+    selectConversation(undefined);
     setMessages([]);
     setAttachments([]);
     setError(undefined);
@@ -231,7 +239,7 @@ export function App() {
       if (event.conversationId) {
         state.conversationId = event.conversationId;
         await loadConversations();
-        setActiveConversationId(event.conversationId);
+        selectConversation(event.conversationId, "replace");
         await loadMessages(event.conversationId);
       }
       throw new Error(event.message);
@@ -304,7 +312,7 @@ export function App() {
     await loadConversations();
 
     if (state.conversationId) {
-      setActiveConversationId(state.conversationId);
+      selectConversation(state.conversationId, "replace");
       await loadMessages(state.conversationId);
       return;
     }
@@ -318,6 +326,14 @@ export function App() {
         message.id === messageId ? { ...message, ...patch } : message
       )
     );
+  }
+
+  function selectConversation(
+    conversationId?: string,
+    mode: "push" | "replace" = "push"
+  ) {
+    setActiveConversationId(conversationId);
+    updateConversationQuery(conversationId, mode);
   }
 
   async function uploadImage(file: File) {
@@ -374,7 +390,7 @@ export function App() {
               }
               key={conversation.id}
               type="button"
-              onClick={() => setActiveConversationId(conversation.id)}
+              onClick={() => selectConversation(conversation.id)}
             >
               {conversation.title}
             </button>
@@ -484,6 +500,35 @@ function readFileAsDataUrl(file: File): Promise<string> {
 function resolveAttachmentUrl(url: string): string {
   if (/^https?:\/\//u.test(url)) return url;
   return `${API_BASE_URL}${url}`;
+}
+
+function getConversationIdFromLocation(): string | undefined {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("conversationId") ?? undefined;
+}
+
+function updateConversationQuery(
+  conversationId: string | undefined,
+  mode: "push" | "replace"
+) {
+  const url = new URL(window.location.href);
+
+  if (conversationId) {
+    url.searchParams.set("conversationId", conversationId);
+  } else {
+    url.searchParams.delete("conversationId");
+  }
+
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  if (nextUrl === `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+    return;
+  }
+
+  window.history[mode === "replace" ? "replaceState" : "pushState"](
+    null,
+    "",
+    nextUrl
+  );
 }
 
 function mimeTypeFromFileName(fileName: string): string {
