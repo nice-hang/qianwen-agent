@@ -4,7 +4,7 @@ import { addChunksToLanceDb, countIndexedChunks } from "./lancedb-store";
 import { loadParsedChunks } from "./parsed-chunks";
 import type { IndexedDocumentChunk } from "./types";
 
-const EMBEDDING_BATCH_SIZE = 16;
+const EMBEDDING_BATCH_SIZE = 10;
 
 export async function ensureFileIndexed(input: {
   attachment: ChatAttachment & { storagePath: string };
