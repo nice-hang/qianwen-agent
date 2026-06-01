@@ -1,4 +1,5 @@
 import type { ChatMessage } from "@qianwen-agent/shared";
+import { buildSystemContextMessages, type SystemContextOptions } from "./system-context";
 
 export type ProviderMessage =
   | {
@@ -37,9 +38,12 @@ export type ProviderContentPart =
       };
     };
 
-export function buildProviderMessages(messages: ChatMessage[]): ProviderMessage[] {
+export function buildProviderMessages(
+  messages: ChatMessage[],
+  options: SystemContextOptions = {}
+): ProviderMessage[] {
   // Server 保存应用消息；provider 只接收精简后的模型输入投影。
-  const providerMessages: ProviderMessage[] = [];
+  const providerMessages: ProviderMessage[] = buildSystemContextMessages(options);
 
   for (const message of messages) {
     const content = buildMessageContent(message);
