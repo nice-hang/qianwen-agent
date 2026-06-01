@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetch as expoFetch } from "expo/fetch";
+import * as ImagePicker from "expo-image-picker";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
 import {
   createApiClient,
   type AgentEvent,
+  type ChatAttachment,
   type ChatMessage,
   type Conversation,
   type SearchSource
@@ -27,12 +30,19 @@ const api = createApiClient({
   baseUrl: getApiBaseUrl(),
   fetchImpl: expoFetch as typeof fetch
 });
+const MAX_UPLOAD_IMAGE_BYTES = 7 * 1024 * 1024;
+const UPLOAD_IMAGE_ATTEMPTS = [
+  { maxEdge: 1600, quality: 0.72 },
+  { maxEdge: 1280, quality: 0.62 },
+  { maxEdge: 960, quality: 0.52 }
+];
 
 export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [mode, setMode] = useState<"fast" | "deep">("fast");
   const [isSending, setIsSending] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -83,24 +93,31 @@ export default function App() {
   function startNewChat() {
     setActiveConversationId(undefined);
     setMessages([]);
+    setAttachments([]);
     setError(undefined);
     setIsSidebarOpen(false);
   }
 
   async function sendCurrentDraft() {
     const text = draft.trim();
-    if (!text || isSending) return;
+    if ((!text && attachments.length === 0) || isSending) return;
     await sendMessage(text);
   }
 
   async function sendMessage(text: string) {
-    const optimistic = createOptimisticMessages(text, activeConversationId);
+    const sentAttachments = attachments;
+    const optimistic = createOptimisticMessages(
+      text,
+      activeConversationId,
+      sentAttachments
+    );
     const state: SendState = {
       conversationId: activeConversationId,
       assistantId: optimistic.assistant.id
     };
 
     setDraft("");
+    setAttachments([]);
     setError(undefined);
     setIsSending(true);
     setMessages((current) => [...current, optimistic.user, optimistic.assistant]);
@@ -110,7 +127,8 @@ export default function App() {
         {
           conversationId: activeConversationId,
           message: text,
-          mode
+          mode,
+          attachmentIds: sentAttachments.map((attachment) => attachment.id)
         },
         {
           onEvent: async (event) => {
@@ -238,6 +256,48 @@ export default function App() {
     );
   }
 
+  async function pickImage() {
+    if (isSending) return;
+
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setError("需要相册权限才能上传图片");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: Platform.OS === "ios",
+        allowsMultipleSelection: false,
+        base64: true,
+        mediaTypes: ["images"],
+        presentationStyle:
+          Platform.OS === "ios"
+            ? ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN
+            : undefined,
+        quality: 0.9
+      });
+
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset?.uri) {
+        setError("图片读取失败，请重新选择");
+        return;
+      }
+
+      const preparedImage = await prepareUploadImage(asset);
+      const response = await api.uploadImage({
+        fileName: asset.fileName ?? "image.jpg",
+        mimeType: "image/jpeg",
+        dataUrl: `data:image/jpeg;base64,${preparedImage.base64}`
+      });
+
+      setAttachments((current) => [...current, response.attachment]);
+    } catch (cause) {
+      setError(readError(cause));
+    }
+  }
+
   return (
     <SafeAreaView style={styles.shell}>
       <KeyboardAvoidingView
@@ -279,10 +339,18 @@ export default function App() {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           <ModeBar mode={mode} onModeChange={setMode} />
           <Composer
+            attachments={attachments}
             draft={draft}
             isSending={isSending}
             onChangeDraft={setDraft}
+            onPickImage={() => void pickImage()}
+            onRemoveAttachment={(attachmentId) =>
+              setAttachments((current) =>
+                current.filter((attachment) => attachment.id !== attachmentId)
+              )
+            }
             onSend={() => void sendCurrentDraft()}
+            resolveAttachmentUrl={resolveAttachmentUrl}
           />
         </View>
 
@@ -311,4 +379,44 @@ function getApiBaseUrl(): string {
 function resolveAttachmentUrl(url: string): string {
   if (/^https?:\/\//u.test(url)) return url;
   return `${getApiBaseUrl()}${url}`;
+}
+
+async function prepareUploadImage(asset: ImagePicker.ImagePickerAsset): Promise<{
+  base64: string;
+}> {
+  for (const attempt of UPLOAD_IMAGE_ATTEMPTS) {
+    const resize = buildResizeAction(asset.width, asset.height, attempt.maxEdge);
+    const image = await manipulateAsync(asset.uri, resize ? [resize] : [], {
+      base64: true,
+      compress: attempt.quality,
+      format: SaveFormat.JPEG
+    });
+
+    if (!image.base64) continue;
+    if (estimateBase64Bytes(image.base64) <= MAX_UPLOAD_IMAGE_BYTES) {
+      return {
+        base64: image.base64
+      };
+    }
+  }
+
+  throw new Error("图片过大，请选择更小的图片");
+}
+
+function buildResizeAction(
+  width: number | undefined,
+  height: number | undefined,
+  maxEdge: number
+): { resize: { width?: number; height?: number } } | undefined {
+  if (!width || !height) return { resize: { width: maxEdge } };
+  if (width <= maxEdge && height <= maxEdge) return undefined;
+
+  return width >= height
+    ? { resize: { width: maxEdge } }
+    : { resize: { height: maxEdge } };
+}
+
+function estimateBase64Bytes(base64: string): number {
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - padding;
 }

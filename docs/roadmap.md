@@ -236,7 +236,7 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [x] 实现图片上传接口
 - [x] 图片保存到 `apps/server/uploads/images`
 - [x] Web composer 展示图片缩略图
-- [ ] RN 适配图片选择和上传
+- [x] RN 适配图片选择和上传
 - [x] 发消息时携带 `attachmentIds`
 - [x] Server 调模型前临时转 base64 data URL 或可访问 URL
 - [x] QwenProvider 支持 multimodal input

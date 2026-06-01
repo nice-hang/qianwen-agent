@@ -243,6 +243,39 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingBottom: Platform.OS === "android" ? 18 : 8
   },
+  attachmentStrip: {
+    marginBottom: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  attachmentPreview: {
+    width: 70,
+    height: 70,
+    borderRadius: 14,
+    overflow: "hidden",
+    backgroundColor: "#f4f4f4"
+  },
+  attachmentPreviewImage: {
+    width: "100%",
+    height: "100%"
+  },
+  attachmentRemoveButton: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.58)"
+  },
+  attachmentRemoveText: {
+    color: "#ffffff",
+    fontSize: 16,
+    lineHeight: 19
+  },
   composer: {
     minHeight: 58,
     paddingHorizontal: 14,
@@ -260,9 +293,18 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10
   },
-  voiceIcon: {
+  imagePickButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f3f3f3"
+  },
+  imagePickText: {
     color: "#202124",
-    fontSize: 26
+    fontSize: 26,
+    lineHeight: 30
   },
   input: {
     flex: 1,

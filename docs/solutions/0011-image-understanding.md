@@ -55,20 +55,21 @@ MVP 图片文件存本地，Server 负责上传、持久化附件元数据、构
 - Agent Runtime 支持把 user message 投影为 OpenAI-compatible `text + image_url` multimodal content。
 - 含图请求不切模型，继续使用当前 `QWEN_MODEL`，例如 `qwen3.6-flash`。
 - 传图不改变用户选择的 fast / deep，也不禁用现有 web_search / web_fetch tools。
-- 含图请求会增加一条 system instruction，约束普通识图/描述不要自动联网；只有用户明确要求联网、来源、最新信息等才调用 web tools。
 - provider request trace 会把图片 data URL 替换为 `[image data url omitted]`。
 - Web composer 已接入图片选择、上传、预览、移除、图文发送和历史图片展示。
-- RN 已接入历史图片展示；原生选择上传入口待引入 `expo-image-picker` 后补齐。
+- RN 已接入 `expo-image-picker` 和 `expo-image-manipulator`，支持图片选择、压缩上传、预览、移除、图文发送和历史图片展示；上传前会转 JPEG，并按 1600 / 1280 / 960 长边逐级压缩，避免大图触发服务端 8MB 限制。
 
 ## 验证记录
 
 - `pnpm --filter @qianwen-agent/server prisma generate` 通过。
 - `pnpm --filter @qianwen-agent/server prisma migrate deploy` 已将 attachments migration 应用到本地 `dev.db`。
 - `pnpm typecheck` 通过。
+- `pnpm --filter @qianwen-agent/mobile typecheck` 通过。
+- iOS Simulator 已加载 8082 fresh Metro bundle，可看到 RN composer 图片入口；自动点击被 macOS 辅助访问权限拦截，未完成端到端点选相册验证。
 - 用 1x1 PNG data URL 调用 `POST /api/attachments/images`，返回 attachment。
 - 调用返回的 `/api/attachments/:id/file`，响应 `200 OK` 且 `content-type: image/png`。
 
 ## 待确认问题
 
 - 需要用真实 `QWEN_MODEL` 验证 deep mode、tool calling 和 multimodal input 同轮组合的 provider 支持情况。
-- RN 原生选图依赖使用 `expo-image-picker` 还是已有业务封装。
+- RN 图片选择上传还需在 iOS Simulator / 真机或 Android 设备上做一轮实际操作验证。

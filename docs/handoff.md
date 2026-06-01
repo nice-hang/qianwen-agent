@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-正在收尾 Stage 9：图片理解，Web / Server / Agent Runtime 主链路已完成，RN 还缺原生图片选择上传入口。
+正在收尾 Stage 9：图片理解，Web / Server / Agent Runtime / RN 主链路已完成，剩余真实图文回答验证。
 
 ## 当前状态
 
@@ -46,7 +46,7 @@
 - Stage 9 Web composer 已支持图片选择、上传、缩略图预览、随消息发送 `attachmentIds` 和历史消息图片展示。
 - Stage 9 Server 会在聊天前把当前用户消息的图片临时读取为 base64 data URL，传给 Agent Runtime；trace 中会隐藏图片 data URL。
 - Stage 9 Agent Runtime 已支持 OpenAI-compatible multimodal content；含图不切模型，继续使用当前 `QWEN_MODEL`。
-- Stage 9 RN 已支持历史图片展示；原生图片选择和上传入口暂未接入，因为当前依赖未安装 `expo-image-picker`。
+- Stage 9 RN 已接入 `expo-image-picker` 和 `expo-image-manipulator`，支持相册选图、压缩上传、待发送预览、随消息提交 `attachmentIds` 和历史图片展示。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -98,9 +98,8 @@
 
 1. 用真实搜索 run 验证 Agent Trace Viewer 的 request1 -> tool call -> request2 -> final answer 链路。
 2. 校准真实搜索行为和 Tavily 中文搜索质量。
-3. Stage 9 补 RN 原生图片选择上传入口，并用当前 `QWEN_MODEL` 完成图文回答验证；Stage 10 再做同一会话摘要。
+3. Stage 9 用当前 `QWEN_MODEL` 完成图文回答验证；Stage 10 再做同一会话摘要。
 
 ## 阻塞项
 
 - Android 当前没有 AVD 或连接设备，需创建一个 AVD 或连接真机后继续验证。
-- RN 原生图片选择需要新增 `expo-image-picker` 或等价 Expo 选图依赖。

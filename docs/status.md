@@ -63,13 +63,13 @@ Stage 7: Agent Trace 监控
 - [x] 建立 attachments 表和本地图片上传接口，图片保存到 `apps/server/uploads/images`
 - [x] Web composer 支持图片上传、缩略图、图文消息发送和历史图片展示
 - [x] Agent Runtime 支持把当前用户图片投影为 OpenAI-compatible multimodal input
-- [x] RN 已支持历史消息图片展示
+- [x] RN 支持图片选择、上传、待发送预览、图文消息发送和历史图片展示
 
 ## 进行中
 
 - [x] 已重新规划 Stage 6-10
 - [ ] 待真实 `TAVILY_API_KEY` 环境下校准模型是否按预期自动搜索
-- [ ] Stage 9 剩余：RN 原生图片选择和上传入口，需要引入 `expo-image-picker`
+- [ ] Stage 9 剩余：用真实 `QWEN_MODEL` 验证模型基于图片回答
 
 ## 未开始
 
@@ -95,4 +95,4 @@ Stage 7: Agent Trace 监控
 
 1. 用真实搜索 run 验证 Agent Trace Viewer 的 request/tool/request 链路展示。
 2. 校准真实搜索行为：普通知识问题不搜索、时效问题会搜索。
-3. Stage 9 继续补 RN 原生图片选择上传，并用真实 `QWEN_MODEL` 验证模型基于图片回答；Stage 10 再做会话摘要。
+3. Stage 9 用真实 `QWEN_MODEL` 验证模型基于图片回答；Stage 10 再做会话摘要。

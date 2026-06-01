@@ -1,4 +1,4 @@
-import type { ChatMessage, SearchSource } from "@qianwen-agent/shared";
+import type { ChatAttachment, ChatMessage, SearchSource } from "@qianwen-agent/shared";
 
 export interface OptimisticMessages {
   assistant: ChatMessage;
@@ -12,7 +12,8 @@ export interface SendState {
 
 export function createOptimisticMessages(
   text: string,
-  conversationId: string | undefined
+  conversationId: string | undefined,
+  attachments: ChatAttachment[] = []
 ): OptimisticMessages {
   const fallbackConversationId = conversationId ?? `local-conversation-${Date.now()}`;
   const now = new Date().toISOString();
@@ -24,6 +25,7 @@ export function createOptimisticMessages(
       role: "user",
       status: "completed",
       content: text,
+      attachments,
       createdAt: now
     },
     assistant: {
@@ -58,4 +60,3 @@ export function dedupeSources(
 export function readError(cause: unknown): string {
   return cause instanceof Error ? cause.message : "请求失败";
 }
-
