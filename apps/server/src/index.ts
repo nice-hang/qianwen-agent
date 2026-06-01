@@ -10,8 +10,13 @@ import { createConversationRepository } from "./storage/conversation-repository"
 import { prisma } from "./storage/prisma";
 import { createTraceRepository } from "./storage/trace-repository";
 
+const JSON_BODY_LIMIT_BYTES = 20 * 1024 * 1024;
+
 export function buildServer() {
-  const app = Fastify({ logger: true });
+  const app = Fastify({
+    logger: true,
+    bodyLimit: JSON_BODY_LIMIT_BYTES
+  });
   const conversationRepository = createConversationRepository(prisma);
   const traceRepository = createTraceRepository(prisma);
 
@@ -37,6 +42,10 @@ export function buildServer() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  void startServer();
+}
+
+async function startServer(): Promise<void> {
   const { port, host } = loadConfig();
   const app = buildServer();
 
