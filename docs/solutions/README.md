@@ -30,6 +30,7 @@
 0012-local-file-rag-lancedb.md
 0013-agent-trace-ux-refactor.md
 0014-conversation-summary.md
+0015-system-context-design.md
 ```
 
 ## 与其他目录的区别
