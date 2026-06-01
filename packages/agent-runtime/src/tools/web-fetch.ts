@@ -59,7 +59,7 @@ export const webFetchTool: BuiltInTool<WebFetchOutput> = {
   summarize(output) {
     return {
       ...output,
-      text: output.text.slice(0, 1000)
+      text: (output.text ?? "").slice(0, 1000)
     };
   }
 };

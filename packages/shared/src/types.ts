@@ -22,6 +22,11 @@ export interface ChatAttachment {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
+  kind?: "image" | "file";
+  parseStatus?: "uploaded" | "parsing" | "ready" | "error";
+  parseError?: string | null;
+  chunkCount?: number | null;
+  parsedAt?: string | null;
   url: string;
   imageDataUrl?: string;
   createdAt: string;
@@ -90,6 +95,13 @@ export interface ChatStreamRequest {
 }
 
 export interface UploadImageRequest {
+  fileName: string;
+  mimeType: string;
+  dataUrl: string;
+}
+
+export interface UploadFileRequest {
+  conversationId?: string;
   fileName: string;
   mimeType: string;
   dataUrl: string;

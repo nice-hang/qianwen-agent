@@ -5,6 +5,7 @@ import type {
   ChatAttachment,
   ChatMessage,
   ChatStreamRequest,
+  UploadFileRequest,
   UploadImageRequest,
   Conversation,
   ModelUsage
@@ -26,6 +27,10 @@ export interface MessagesResponse {
 }
 
 export interface UploadImageResponse {
+  attachment: ChatAttachment;
+}
+
+export interface UploadFileResponse {
   attachment: ChatAttachment;
 }
 
@@ -96,6 +101,20 @@ export function createApiClient(options: ApiClientOptions = {}) {
       }
 
       return response.json() as Promise<UploadImageResponse>;
+    },
+
+    async uploadFile(request: UploadFileRequest): Promise<UploadFileResponse> {
+      const response = await fetchImpl(`${baseUrl}/api/attachments/files`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload file failed: ${response.status}`);
+      }
+
+      return response.json() as Promise<UploadFileResponse>;
     },
 
     async streamChat(

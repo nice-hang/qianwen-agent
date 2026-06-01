@@ -100,7 +100,52 @@ export function createConversationRepository(db: PrismaClient) {
         fileName: input.fileName,
         mimeType: input.mimeType,
         sizeBytes: input.sizeBytes,
-        storagePath: input.storagePath
+        storagePath: input.storagePath,
+        kind: "image",
+        parseStatus: "ready",
+        parsedAt: new Date()
+      }
+    });
+
+    return toChatAttachment(attachment);
+  }
+
+  async function createFileAttachment(input: {
+    conversationId?: string;
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    storagePath: string;
+  }): Promise<ChatAttachment> {
+    const attachment = await db.attachment.create({
+      data: {
+        conversationId: input.conversationId,
+        fileName: input.fileName,
+        mimeType: input.mimeType,
+        sizeBytes: input.sizeBytes,
+        storagePath: input.storagePath,
+        kind: "file",
+        parseStatus: "uploaded"
+      }
+    });
+
+    return toChatAttachment(attachment);
+  }
+
+  async function updateAttachmentParseState(input: {
+    id: string;
+    parseStatus: "uploaded" | "parsing" | "ready" | "error";
+    parseError?: string | null;
+    chunkCount?: number | null;
+    parsedAt?: Date | null;
+  }): Promise<ChatAttachment> {
+    const attachment = await db.attachment.update({
+      where: { id: input.id },
+      data: {
+        parseStatus: input.parseStatus,
+        parseError: input.parseError,
+        chunkCount: input.chunkCount,
+        parsedAt: input.parsedAt
       }
     });
 
@@ -165,6 +210,8 @@ export function createConversationRepository(db: PrismaClient) {
     listMessages,
     addMessage,
     createImageAttachment,
+    createFileAttachment,
+    updateAttachmentParseState,
     getAttachment,
     listAttachmentsForAgent,
     touchConversation

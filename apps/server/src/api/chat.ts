@@ -1,16 +1,19 @@
-import { readFile } from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
-import type {
-  ChatAttachment,
-  AgentEvent,
-  ChatMessage,
-  ChatStreamRequest,
-  SearchSource
-} from "@qianwen-agent/shared";
+import type { ChatStreamRequest } from "@qianwen-agent/shared";
 import type { runAgent } from "@qianwen-agent/agent-runtime";
 import type { ConversationRepository } from "../storage/conversation-repository";
+import { injectFileContextIntoLastUserMessage } from "../rag/retrieval";
 import type { TraceRepository } from "../storage/trace-repository";
 import { prepareEventStream, writeAgentEvent } from "../stream/event-writer";
+import {
+  defaultPromptForAttachments,
+  loadAgentAttachments,
+  normalizeAttachmentIds,
+  withCurrentAttachments
+} from "../chat/attachments";
+import { createChatAgentEventHandler } from "../chat/agent-events";
+import { prepareFileRagContext } from "../chat/file-rag";
+import { normalizeConversationTitle } from "../chat/title";
 
 type RunAgent = typeof runAgent;
 
@@ -34,10 +37,9 @@ export function registerChatRoutes(
     const runStartedAt = run.startedAt;
     const runStartedMs = Date.now();
     let firstEventMs: number | undefined;
-    let firstReasoningMs: number | undefined;
-    let firstAnswerMs: number | undefined;
-    let providerStartedMs: number | undefined;
-    let providerDoneMs: number | undefined;
+    let agentEvents:
+      | ReturnType<typeof createChatAgentEventHandler>
+      | undefined;
 
     async function recordTrace(type: string, data?: unknown) {
       const event = await options.traces.recordEvent({
@@ -124,12 +126,14 @@ export function registerChatRoutes(
         reply.raw.end();
         return reply;
       }
+      const userMessageContent =
+        messageText || defaultPromptForAttachments(currentAttachments);
 
       // 先保存用户消息，这样即使模型失败，刷新后也能恢复这轮输入。
       await options.conversations.addMessage({
         conversationId,
         role: "user",
-        content: messageText,
+        content: userMessageContent,
         attachmentIds
       });
       await recordTrace("user_message_saved", {
@@ -137,19 +141,36 @@ export function registerChatRoutes(
         attachmentCount: attachmentIds.length
       });
 
+      const fileRag = await prepareFileRagContext({
+        attachments: currentAttachments,
+        conversationId,
+        query: userMessageContent,
+        recordTrace
+      });
+
       const messages = await options.conversations.listMessages(conversationId);
-      const messagesForAgent =
+      const messagesWithAttachments =
         currentAttachments.length > 0
           ? withCurrentAttachments(messages, currentAttachments)
           : messages;
+      const messagesForAgent = injectFileContextIntoLastUserMessage(
+        messagesWithAttachments,
+        fileRag.contextText
+      );
       const mode = request.body.mode === "deep" ? "deep" : "fast";
-      const reasoningParts: string[] = [];
-      const assistantParts: string[] = [];
-      const searchSources: SearchSource[] = [];
-      let assistantMessage: ChatMessage | null = null;
-      let terminalAgentError = false;
+      agentEvents = createChatAgentEventHandler({
+        conversationId,
+        runId: run.id,
+        runStartedMs,
+        reply,
+        conversations: options.conversations,
+        traces: options.traces,
+        recordTrace,
+        getFirstEventMs: () => firstEventMs,
+        initialSources: []
+      });
 
-      providerStartedMs = Date.now();
+      agentEvents.state.providerStartedMs = Date.now();
       await recordTrace("provider_request_started", {
         mode
       });
@@ -163,163 +184,13 @@ export function registerChatRoutes(
         },
         {
           onEvent: async (event) => {
-            await handleAgentEvent(event);
+            await agentEvents?.handleEvent(event);
           }
         }
       );
 
-      async function handleAgentEvent(event: AgentEvent) {
-        if (event.type === "provider_request") {
-          await recordTrace("provider_request", event);
-          return;
-        }
-
-        if (event.type === "provider_response") {
-          providerDoneMs = Date.now();
-          await recordTrace("provider_response", event);
-          return;
-        }
-
-        if (event.type === "reasoning_delta") {
-          if (firstReasoningMs === undefined) {
-            firstReasoningMs = Date.now() - runStartedMs;
-            await recordTrace("first_reasoning_delta");
-          }
-          reasoningParts.push(event.text);
-          writeAgentEvent(reply, event);
-          return;
-        }
-
-        if (event.type === "answer_delta") {
-          if (firstAnswerMs === undefined) {
-            firstAnswerMs = Date.now() - runStartedMs;
-            await recordTrace("first_answer_delta");
-          }
-          assistantParts.push(event.text);
-          writeAgentEvent(reply, event);
-          return;
-        }
-
-        if (event.type === "tool_call_started") {
-          await recordTrace("tool_call_started", event);
-          writeAgentEvent(reply, event);
-          return;
-        }
-
-        if (event.type === "tool_call_done") {
-          await recordTrace("tool_call_done", event);
-          writeAgentEvent(reply, event);
-          return;
-        }
-
-        if (event.type === "search_results") {
-          await recordTrace("search_results", {
-            toolCallId: event.toolCallId,
-            query: event.query,
-            sourcesCount: event.sources.length,
-            sources: event.sources
-          });
-          searchSources.push(...event.sources);
-          writeAgentEvent(reply, event);
-          return;
-        }
-
-        if (event.type === "done") {
-          providerDoneMs = Date.now();
-          // Runtime 不知道数据库 id，所以由 Server 保存后替换 messageId。
-          const assistantContent = assistantParts.join("");
-          if (event.usage) {
-            await options.traces.saveUsage({ runId: run.id, usage: event.usage });
-          }
-          assistantMessage = await options.conversations.addMessage({
-            conversationId,
-            role: "assistant",
-            content: assistantContent,
-            reasoningContent: reasoningParts.join("") || undefined,
-            sources: dedupeSources(searchSources),
-            status: assistantContent ? "completed" : "failed"
-          });
-          await options.conversations.touchConversation(conversationId);
-          await recordTrace("assistant_message_saved", {
-            messageId: assistantMessage.id
-          });
-          await options.traces.completeRun({
-            runId: run.id,
-            ttfeMs: firstEventMs,
-            ttfrMs: firstReasoningMs,
-            ttfaMs: firstAnswerMs,
-            ttcMs: Date.now() - runStartedMs,
-            providerMs:
-              providerStartedMs && providerDoneMs
-                ? providerDoneMs - providerStartedMs
-                : undefined
-          });
-          await recordTrace("run_completed");
-
-          writeAgentEvent(reply, {
-            type: "done",
-            runId: run.id,
-            messageId: assistantMessage.id,
-            conversationId,
-            usage: event.usage
-          });
-          return;
-        }
-
-        if (event.type === "error") {
-          terminalAgentError = true;
-          await recordTrace("run_failed", event);
-          await options.traces.failRun({
-            runId: run.id,
-            errorMessage: event.message,
-            ttfeMs: firstEventMs,
-            ttfrMs: firstReasoningMs,
-            ttfaMs: firstAnswerMs,
-            ttcMs: Date.now() - runStartedMs,
-            providerMs: providerStartedMs ? Date.now() - providerStartedMs : undefined
-          });
-          writeAgentEvent(reply, {
-            ...event,
-            conversationId
-          });
-          return;
-        }
-
-        writeAgentEvent(reply, event);
-      }
-
       // 防御性兜底：处理 provider 没有显式 done 但已经有回答内容的情况。
-      if (!terminalAgentError && !assistantMessage && assistantParts.length > 0) {
-        assistantMessage = await options.conversations.addMessage({
-          conversationId,
-          role: "assistant",
-          content: assistantParts.join(""),
-          reasoningContent: reasoningParts.join("") || undefined,
-          sources: dedupeSources(searchSources)
-        });
-        await options.conversations.touchConversation(conversationId);
-        await recordTrace("assistant_message_saved", {
-          messageId: assistantMessage.id
-        });
-        await options.traces.completeRun({
-          runId: run.id,
-          ttfeMs: firstEventMs,
-          ttfrMs: firstReasoningMs,
-          ttfaMs: firstAnswerMs,
-          ttcMs: Date.now() - runStartedMs,
-          providerMs:
-            providerStartedMs && providerDoneMs
-              ? providerDoneMs - providerStartedMs
-              : undefined
-        });
-        await recordTrace("run_completed");
-        writeAgentEvent(reply, {
-          type: "done",
-          runId: run.id,
-          messageId: assistantMessage.id,
-          conversationId
-        });
-      }
+      await agentEvents.completePendingAnswer();
     } catch (error) {
       request.log.error(error);
       const message = error instanceof Error ? error.message : "Chat stream failed.";
@@ -328,10 +199,12 @@ export function registerChatRoutes(
         runId: run.id,
         errorMessage: message,
         ttfeMs: firstEventMs,
-        ttfrMs: firstReasoningMs,
-        ttfaMs: firstAnswerMs,
+        ttfrMs: agentEvents?.state.firstReasoningMs,
+        ttfaMs: agentEvents?.state.firstAnswerMs,
         ttcMs: Date.now() - runStartedMs,
-        providerMs: providerStartedMs ? Date.now() - providerStartedMs : undefined
+        providerMs: agentEvents?.state.providerStartedMs
+          ? Date.now() - agentEvents.state.providerStartedMs
+          : undefined
       });
       // 尽量带上 conversationId，方便前端重新拉取已保存的用户消息。
       writeAgentEvent(reply, {
@@ -346,76 +219,4 @@ export function registerChatRoutes(
 
     return reply;
   });
-}
-
-// Stage 1 标题保持确定性：直接取首行，不额外调用模型生成。
-function normalizeConversationTitle(title: string): string {
-  const firstLine = title.trim().split(/\r?\n/)[0] ?? "";
-  const normalized = firstLine.replace(/\s+/g, " ").trim();
-
-  if (!normalized) return "New chat";
-  return normalized.length > 40 ? `${normalized.slice(0, 40)}...` : normalized;
-}
-
-function dedupeSources(sources: SearchSource[]): SearchSource[] | undefined {
-  const seen = new Set<string>();
-  const deduped: SearchSource[] = [];
-
-  for (const source of sources) {
-    const key = source.url || source.id;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    deduped.push(source);
-  }
-
-  return deduped.length > 0 ? deduped : undefined;
-}
-
-function normalizeAttachmentIds(input: string[] | undefined): string[] {
-  return [...new Set((input ?? []).filter((id) => typeof id === "string" && id))];
-}
-
-async function loadAgentAttachments(input: {
-  conversations: ConversationRepository;
-  attachmentIds: string[];
-  conversationId: string;
-}): Promise<ChatAttachment[]> {
-  const attachments = await input.conversations.listAttachmentsForAgent(
-    input.attachmentIds,
-    input.conversationId
-  );
-
-  return Promise.all(
-    attachments.map(async (attachment) => {
-      const bytes = await readFile(attachment.storagePath);
-      return {
-        ...attachment,
-        imageDataUrl: `data:${attachment.mimeType};base64,${bytes.toString("base64")}`
-      };
-    })
-  );
-}
-
-function withCurrentAttachments(
-  messages: ChatMessage[],
-  attachments: ChatAttachment[]
-): ChatMessage[] {
-  let lastUserMessageIndex = -1;
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index]?.role === "user") {
-      lastUserMessageIndex = index;
-      break;
-    }
-  }
-
-  if (lastUserMessageIndex === -1) return messages;
-
-  return messages.map((message, index) =>
-    index === lastUserMessageIndex
-      ? {
-          ...message,
-          attachments
-        }
-      : message
-  );
 }

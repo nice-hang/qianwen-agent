@@ -334,6 +334,21 @@ export function App() {
     setAttachments((current) => [...current, response.attachment]);
   }
 
+  async function uploadFile(file: File) {
+    const dataUrl = await readFileAsDataUrl(file);
+    const response = await withRequest(() =>
+      api.uploadFile({
+        conversationId: activeConversationId,
+        fileName: file.name,
+        mimeType: file.type || mimeTypeFromFileName(file.name),
+        dataUrl
+      })
+    );
+
+    if (!response) return;
+    setAttachments((current) => [...current, response.attachment]);
+  }
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -386,6 +401,7 @@ export function App() {
           messages={messages}
           mode={mode}
           onDraftChange={setDraft}
+          onFileSelected={(file) => void uploadFile(file)}
           onImageSelected={(file) => void uploadImage(file)}
           onModeChange={setMode}
           onRemoveAttachment={(attachmentId) =>
@@ -468,6 +484,18 @@ function readFileAsDataUrl(file: File): Promise<string> {
 function resolveAttachmentUrl(url: string): string {
   if (/^https?:\/\//u.test(url)) return url;
   return `${API_BASE_URL}${url}`;
+}
+
+function mimeTypeFromFileName(fileName: string): string {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".md")) return "text/markdown";
+  if (lower.endsWith(".csv")) return "text/csv";
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".docx")) {
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  }
+  if (lower.endsWith(".json")) return "application/json";
+  return "text/plain";
 }
 
 function dedupeSources(

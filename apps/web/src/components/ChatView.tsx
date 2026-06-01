@@ -23,6 +23,7 @@ interface ChatViewProps {
   mode: "fast" | "deep";
   selectedAttachments: ChatAttachment[];
   onDraftChange: (draft: string) => void;
+  onFileSelected: (file: File) => void;
   onImageSelected: (file: File) => void;
   onModeChange: (mode: "fast" | "deep") => void;
   onRemoveAttachment: (attachmentId: string) => void;
@@ -32,6 +33,7 @@ interface ChatViewProps {
 
 export function ChatView(props: ChatViewProps) {
   const isEmpty = props.messages.length === 0;
+  const [isUploadMenuOpen, setUploadMenuOpen] = useState(false);
   const [sourceDrawer, setSourceDrawer] = useState<{
     title: string;
     sources: SearchSource[];
@@ -74,6 +76,7 @@ export function ChatView(props: ChatViewProps) {
           sources={sourceDrawer.sources}
           title={sourceDrawer.title}
           onClose={() => setSourceDrawer(undefined)}
+          resolveUrl={props.resolveAttachmentUrl}
         />
       ) : null}
 
@@ -96,18 +99,49 @@ export function ChatView(props: ChatViewProps) {
         />
         <div className="composer-footer">
           <div className="composer-controls">
-            <label className="image-upload-button" title="上传图片">
-              <input
-                accept="image/*"
-                type="file"
-                onChange={(event) => {
-                  const file = event.currentTarget.files?.[0];
-                  event.currentTarget.value = "";
-                  if (file) props.onImageSelected(file);
-                }}
-              />
-              <span aria-hidden="true">＋</span>
-            </label>
+            <div className="upload-menu-wrap">
+              {isUploadMenuOpen ? (
+                <div className="upload-menu" role="menu">
+                  <label className="upload-menu-item" role="menuitem">
+                    <input
+                      accept=".txt,.md,.csv,.pdf,.docx,text/plain,text/markdown,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      type="file"
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        event.currentTarget.value = "";
+                        setUploadMenuOpen(false);
+                        if (file) props.onFileSelected(file);
+                      }}
+                    />
+                    <DocumentUploadIcon />
+                    <span>上传文档</span>
+                  </label>
+                  <label className="upload-menu-item" role="menuitem">
+                    <input
+                      accept="image/*"
+                      type="file"
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        event.currentTarget.value = "";
+                        setUploadMenuOpen(false);
+                        if (file) props.onImageSelected(file);
+                      }}
+                    />
+                    <ImageUploadIcon />
+                    <span>上传图片</span>
+                  </label>
+                </div>
+              ) : null}
+              <button
+                className={isUploadMenuOpen ? "upload-trigger active" : "upload-trigger"}
+                type="button"
+                aria-label="打开上传菜单"
+                aria-expanded={isUploadMenuOpen}
+                onClick={() => setUploadMenuOpen((value) => !value)}
+              >
+                {isUploadMenuOpen ? <CloseIcon /> : <PlusIcon />}
+              </button>
+            </div>
             <div className="mode-switch" aria-label="Chat mode">
               <button
                 className={props.mode === "fast" ? "active" : undefined}
@@ -203,10 +237,14 @@ function AttachmentPreviewStrip(props: {
     <div className="attachment-preview-strip">
       {props.attachments.map((attachment) => (
         <div className="attachment-preview" key={attachment.id}>
-          <img
-            alt={attachment.fileName}
-            src={props.resolveAttachmentUrl(attachment.url)}
-          />
+          {attachment.mimeType.startsWith("image/") ? (
+            <img
+              alt={attachment.fileName}
+              src={props.resolveAttachmentUrl(attachment.url)}
+            />
+          ) : (
+            <FileAttachmentChip attachment={attachment} />
+          )}
           <button
             type="button"
             onClick={() => props.onRemove(attachment.id)}
@@ -227,12 +265,40 @@ function MessageAttachments(props: {
   return (
     <div className="message-attachments">
       {props.attachments.map((attachment) => (
-        <img
-          alt={attachment.fileName}
-          key={attachment.id}
-          src={props.resolveAttachmentUrl(attachment.url)}
-        />
+        <div className="message-attachment" key={attachment.id}>
+          {attachment.mimeType.startsWith("image/") ? (
+            <img
+              alt={attachment.fileName}
+              src={props.resolveAttachmentUrl(attachment.url)}
+            />
+          ) : (
+            <FileAttachmentChip attachment={attachment} />
+          )}
+        </div>
       ))}
+    </div>
+  );
+}
+
+function FileAttachmentChip(props: { attachment: ChatAttachment }) {
+  const statusText =
+    props.attachment.parseStatus === "error"
+      ? "解析失败"
+      : props.attachment.parseStatus === "parsing"
+        ? "解析中"
+        : props.attachment.parseStatus === "ready"
+          ? `${props.attachment.chunkCount ?? 0} 段`
+          : "待解析";
+
+  return (
+    <div className="file-attachment-chip">
+      <span className="file-icon" aria-hidden="true">
+        文
+      </span>
+      <span className="file-main">
+        <strong>{props.attachment.fileName}</strong>
+        <span>{statusText}</span>
+      </span>
     </div>
   );
 }
@@ -282,10 +348,117 @@ function ThinkingBlock(props: { message: ChatMessage }) {
   );
 }
 
+function PlusIcon() {
+  return (
+    <svg className="upload-trigger-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M10 4.5v11M4.5 10h11"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg className="upload-trigger-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="m5.75 5.75 8.5 8.5m0-8.5-8.5 8.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function DocumentUploadIcon() {
+  return (
+    <svg
+      className="upload-menu-icon"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5.75 2.75h5.1l3.4 3.4v3.35"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M10.75 2.75v3.4h3.4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M8.4 16.75H5.75a1.6 1.6 0 0 1-1.6-1.6V4.35a1.6 1.6 0 0 1 1.6-1.6"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M14.75 17.25v-6.5m0 0 2.35 2.35m-2.35-2.35-2.35 2.35"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
+function ImageUploadIcon() {
+  return (
+    <svg
+      className="upload-menu-icon"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3.25 13.65V5.3A2.05 2.05 0 0 1 5.3 3.25h7.2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M3.45 13.15 7.1 9.55a1.25 1.25 0 0 1 1.75 0l1.35 1.35.7-.7a1.25 1.25 0 0 1 1.75 0l2 2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M8.6 16.75H5.3a2.05 2.05 0 0 1-2.05-2.05"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M14.75 8.65v-5.9m0 0 2.1 2.1m-2.1-2.1-2.1 2.1"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
 function SourceDrawer(props: {
   title: string;
   sources: SearchSource[];
   onClose: () => void;
+  resolveUrl: (url: string) => string;
 }) {
   return (
     <aside className="source-drawer" aria-label="Search sources">
@@ -299,7 +472,7 @@ function SourceDrawer(props: {
         {props.sources.map((source, index) => (
           <a
             className="source-item"
-            href={source.url}
+            href={props.resolveUrl(source.url)}
             key={`${source.url}-${index}`}
             rel="noreferrer"
             target="_blank"

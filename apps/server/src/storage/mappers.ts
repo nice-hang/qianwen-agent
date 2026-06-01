@@ -46,6 +46,16 @@ export function toChatAttachment(attachment: Attachment): ChatAttachment {
     fileName: attachment.fileName,
     mimeType: attachment.mimeType,
     sizeBytes: attachment.sizeBytes,
+    kind: attachment.kind === "file" ? "file" : "image",
+    parseStatus:
+      attachment.parseStatus === "uploaded" ||
+      attachment.parseStatus === "parsing" ||
+      attachment.parseStatus === "error"
+        ? attachment.parseStatus
+        : "ready",
+    parseError: attachment.parseError,
+    chunkCount: attachment.chunkCount,
+    parsedAt: attachment.parsedAt?.toISOString() ?? null,
     url: `/api/attachments/${attachment.id}/file`,
     createdAt: attachment.createdAt.toISOString()
   };

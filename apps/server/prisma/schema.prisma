@@ -42,6 +42,11 @@ model Attachment {
   mimeType       String
   sizeBytes      Int
   storagePath    String
+  kind           String        @default("image")
+  parseStatus    String        @default("ready")
+  parseError     String?
+  chunkCount     Int?
+  parsedAt       DateTime?
   createdAt      DateTime      @default(now())
 
   @@index([conversationId, createdAt])

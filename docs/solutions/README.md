@@ -27,7 +27,8 @@
 0009-agent-trace-monitoring.md
 0010-react-native-client.md
 0011-image-understanding.md
-0012-conversation-summary.md
+0012-local-file-rag-lancedb.md
+0013-conversation-summary.md
 ```
 
 ## 与其他目录的区别

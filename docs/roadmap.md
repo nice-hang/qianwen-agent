@@ -249,9 +249,35 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 模型能基于图片回答
 - [x] Web 和 RN 历史消息能恢复图片展示
 
-## Stage 10: 会话摘要
+## Stage 10: 本地文件 RAG
 
-目标：先做同一会话内的轻量摘要，降低长对话上下文压力；暂不做跨会话长期记忆。
+目标：在现有 attachment、Agent Runtime 和 trace 基础上，打通本地文件上传、解析、chunk、embedding、LanceDB 检索和文件引用回答能力。第一版只做会话内文件 RAG，不做全局知识库。
+
+- [ ] 扩展 attachment 支持通用文件，保留图片上传链路
+- [ ] 新增 `POST /api/attachments/files`
+- [ ] 文件保存到 `apps/server/uploads/files`
+- [ ] 支持 `.txt` / `.md` / `.csv` / `.pdf` / `.docx` 解析
+- [ ] 实现文本 chunker，控制 chunk size、overlap 和注入字符上限
+- [ ] 接入 Qwen embedding，新增 embedding model 配置
+- [ ] 使用 LanceDB 本地持久化 chunks、embedding 和 metadata
+- [ ] 聊天前按 conversationId / attachmentId 做 topK 检索
+- [ ] ContextBuilder 注入 retrieved file context
+- [ ] Web composer 展示文件 chip、上传状态和解析状态
+- [ ] Web 回答展示文件引用来源
+- [ ] Debug 记录文件解析、embedding、检索、命中 chunk 和上下文注入事件
+
+验收：
+
+- [ ] 用户能上传文件并看到解析状态
+- [ ] 文件 ready 后，同一会话内提问能基于文件内容回答
+- [ ] 另一个会话不会检索到当前会话的文件
+- [ ] 回答能展示引用的文件名和片段来源
+- [ ] 解析失败不影响普通聊天链路
+- [ ] trace 能看到 RAG 检索 query、命中 chunk、score、注入字符数和耗时
+
+## Stage 11: 会话摘要
+
+目标：在文件 RAG 之后，补同一会话内的轻量摘要，降低长对话上下文压力；暂不做跨会话长期记忆。
 
 - [ ] 使用现有 `conversations.summary` 字段保存会话摘要
 - [ ] 设计摘要触发策略：消息数、token 估算或回答完成后异步更新

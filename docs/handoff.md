@@ -4,7 +4,7 @@
 
 ## 当前目标
 
-正在收尾 Stage 9：图片理解，Web / Server / Agent Runtime / RN 主链路已完成，剩余真实图文回答验证。
+正在规划 Stage 10：本地文件 RAG。Stage 9 图片理解 Web / Server / Agent Runtime / RN 主链路已完成，剩余真实图文回答验证；会话摘要已顺延到 Stage 11。
 
 ## 当前状态
 
@@ -31,7 +31,7 @@
 - Stage 5 方案已确定：先做轻量 Agent Loop，再接自建 `web_search` / `web_fetch` 工具；不优先用 Qwen OpenAI-compatible `enable_search` 做产品主路径。
 - Stage 5 Agent Loop 基础改造已实现：Qwen tool-call stream、内置工具表、sources 持久化、Web 来源 chip / drawer 均已接入。
 - `web_search` 第一版使用 `TAVILY_API_KEY` 调 Tavily；未配置时返回空 sources 和明确 note，loop 仍可继续。
-- 后续阶段已重新规划：Stage 6 先做 Agent Runtime 简化与极简 tool register，Stage 7 做 Agent Trace 监控，Stage 8 做 React Native，Stage 9 做图片理解，Stage 10 再做同一会话摘要。
+- 后续阶段已重新规划：Stage 6 先做 Agent Runtime 简化与极简 tool register，Stage 7 做 Agent Trace 监控，Stage 8 做 React Native，Stage 9 做图片理解，Stage 10 做本地文件 RAG，Stage 11 再做同一会话摘要。
 - Stage 6 已完成：`runAgent` 已直接切换为 callback 版本，旧 async iterable 入口已删除；Server 改为通过 `onEvent` 接收 runtime 事件。
 - Stage 6 已新增极简 tool register，`web_search` / `web_fetch` 在工具侧声明 definition、execute、summarize 和 toEvents。
 - Stage 6 已新增 `provider_request` / `provider_response` debug 事件，Server 只落 trace，不转发给主聊天 Web。
@@ -47,6 +47,16 @@
 - Stage 9 Server 会在聊天前把当前用户消息的图片临时读取为 base64 data URL，传给 Agent Runtime；trace 中会隐藏图片 data URL。
 - Stage 9 Agent Runtime 已支持 OpenAI-compatible multimodal content；含图不切模型，继续使用当前 `QWEN_MODEL`。
 - Stage 9 RN 已接入 `expo-image-picker` 和 `expo-image-manipulator`，支持相册选图、压缩上传、待发送预览、随消息提交 `attachmentIds` 和历史图片展示。
+- Stage 10 方案已确定为本地文件 RAG：本地 uploads 保存原文件，SQLite/Prisma 保存附件元数据，LanceDB 保存 chunks、embedding 和检索 metadata，Qwen embedding + Qwen chat 打通文件问答。
+- Stage 10 第一版只做会话内文件 RAG，不做全局知识库；优先支持 `.txt` / `.md` / `.csv` / `.pdf` / `.docx`，回答展示文件引用来源，Debug 记录 parse / embedding / retrieval / context injected 事件。
+- Stage 10 Web / Server 主链路第一版已实现并用公开 PDF 完成接口自测：上传后 `parseStatus=ready`、`chunkCount=1`，聊天流返回文件 `search_results` 和回答 `Dummy PDF file`。
+- Stage 10 已追加多文件细测：`aurora.md`、`apis.csv`、`dummy.pdf` 的精确字段、接口路径、跨文件支付流程、PDF 内容均回答正确。
+- Stage 10 已用临时 RAG fixture 复测会议纪要、合同摘要、简历、销售数据表等千问用户常见文档类型。
+- 常见问题覆盖会议待办、合同违约金、简历筛选、CSV 收入成本转化率、毛利计算、会议纪要 + 简历跨文档判断、合同交付要求总结。
+- 多文件细测发现来源过宽，检索已改为 LanceDB vector + full-text hybrid search，并使用 LanceDB RRF reranker 融合语义召回和精确字段/接口名召回。
+- 文件-only 发送已修复并验证：空 message + 文件 attachment 会默认总结上传文件内容。
+- 细测中修复既有 `web_fetch` summarize 对异常输出的 `undefined.slice` 问题。
+- LanceDB native binding 在 Node v24 下遇到 macOS code signature 问题；使用 `/Users/bytedance/.nvm/versions/node/v22.19.0/bin` 下的 Node v22.19.0 启动正常。
 - 详细讨论记录在 `discuss/`。
 
 ## 重要决策
@@ -68,7 +78,8 @@
 - Agent Loop 参考 `/Users/bytedance/Documents/github/pi-mono/packages/agent` 的 emit/context/tool 执行设计，但只保留当前需要的 callback emit、极简 tool register、prepare/execute/finalize；不引入 Runtime class、turn、steering、followUp、LangGraph、MCP、插件系统或复杂生命周期。
 - Stage 7 做类似 claude-tap 的 Agent Trace 监控，重点能看到每轮 provider request 的 messages/tools、工具调用前后、相邻 request diff。
 - 图片理解走 multimodal input / provider message projection，不作为工具扩展示例；Server 上传接口采用 JSON data URL，避免为 MVP 引入 multipart 依赖。
-- 轻量长期记忆暂缓；同一会话摘要顺延到 Stage 10，复用 `conversations.summary`，解决长会话上下文压力。
+- 轻量长期记忆暂缓；同一会话摘要顺延到 Stage 11，复用 `conversations.summary`，解决长会话上下文压力。
+- 本地文件 RAG 采用会话内范围：文件默认属于一个 conversation，检索按 conversationId / attachmentId 过滤，避免过早引入全局知识库、权限系统或多租户复杂度。
 - 搜索来源第一版直接持久化到 assistant message 的 `sourcesJson`，不先建 `message_sources` 表。
 - Web UI 优化参考国内版千问，不直接复制商标、官方图形资源或未实现能力入口。
 - 图片 MVP 存本地 uploads，调用模型时临时转 base64 data URL。
@@ -84,7 +95,8 @@
 6. `docs/solutions/0009-agent-trace-monitoring.md`
 7. `docs/solutions/0010-react-native-client.md`
 8. `docs/solutions/0011-image-understanding.md`
-9. `docs/solutions/0012-conversation-summary.md`
+9. `docs/solutions/0012-local-file-rag-lancedb.md`
+10. `docs/solutions/0013-conversation-summary.md`
 
 需要追溯背景时再读：
 
@@ -98,7 +110,7 @@
 
 1. 用真实搜索 run 验证 Agent Trace Viewer 的 request1 -> tool call -> request2 -> final answer 链路。
 2. 校准真实搜索行为和 Tavily 中文搜索质量。
-3. Stage 9 用当前 `QWEN_MODEL` 完成图文回答验证；Stage 10 再做同一会话摘要。
+3. Stage 10 继续补验证和打磨：解析失败降级、更多文件格式样例、LanceDB native 依赖启动说明；之后再进入 Stage 11 会话摘要。
 
 ## 阻塞项
 
