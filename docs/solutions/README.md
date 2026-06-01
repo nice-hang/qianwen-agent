@@ -28,7 +28,8 @@
 0010-react-native-client.md
 0011-image-understanding.md
 0012-local-file-rag-lancedb.md
-0013-conversation-summary.md
+0013-agent-trace-ux-refactor.md
+0014-conversation-summary.md
 ```
 
 ## 与其他目录的区别

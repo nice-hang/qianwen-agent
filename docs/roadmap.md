@@ -275,7 +275,33 @@ UI -> Server -> Agent -> Qwen -> DB -> Stream -> UI
 - [ ] 解析失败不影响普通聊天链路
 - [ ] trace 能看到 RAG 检索 query、命中 chunk、score、注入字符数和耗时
 
-## Stage 11: 会话摘要
+## Stage 11: Agent Trace 体验重构
+
+目标：把现有 Debug Trace 从事件日志升级成可用于面试讲解和工程排障的 Agent 审计面板，优先看核心指标，再下钻每轮模型请求。
+
+- [ ] 梳理现有 `AgentRun` / `AgentEvent`，在前端聚合一轮对话的执行摘要
+- [ ] 顶部最多展示 4 个核心指标：总完成耗时、首字耗时、模型请求耗时、总 Token
+- [ ] 指标使用中文短名称和极短解释，英文缩写只作为辅助
+- [ ] 按模型请求轮次展示本轮传入的 messages、tools、provider response、SSE/Agent 事件和完整 JSON
+- [ ] 支持每轮 request 的请求 JSON、cURL 和对比上次
+- [ ] 工具调用详情展示 arguments、raw output、summary、sources、duration 和 error，并关联到触发它的模型请求轮次
+- [ ] 增加 RAG 命中专区：query、chunk 数、注入字符数、embedding/index/retrieval 耗时、命中文件片段
+- [ ] 增加工具调用专区：工具名、参数、耗时、结果摘要和错误
+- [ ] 保留 provider request / response / raw JSON，但放到二级展开区域
+- [ ] 用普通聊天、深度思考、文件 RAG、搜索工具 run 做截图验证
+
+验收：
+
+- [ ] 面试展示时，第一屏能快速看到核心耗时和模型审计入口
+- [ ] 能一眼判断慢在模型、工具、RAG 还是 stream 首包
+- [ ] 能看到 TTC / TTFA / Provider Latency / Total Token 的中文短解释
+- [ ] 能看到 input / output / reasoning / total token
+- [ ] 每个 provider request 都能展开看到 messages、tools 和 provider response
+- [ ] 每个 tool call 都能展开看到入参、原始返回值、摘要、来源、耗时和错误
+- [ ] 文件 RAG run 能看到命中 chunk、score、注入字符数和耗时
+- [ ] 工具 run 能看到 tool call 参数、结果摘要、耗时和失败原因
+
+## Stage 12: 会话摘要
 
 目标：在文件 RAG 之后，补同一会话内的轻量摘要，降低长对话上下文压力；暂不做跨会话长期记忆。
 

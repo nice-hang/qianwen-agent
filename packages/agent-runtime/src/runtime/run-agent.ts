@@ -245,7 +245,8 @@ async function finalizeToolCall(
     type: "tool_call_done",
     toolName: prepared.toolName,
     toolCallId: prepared.toolCall.id,
-    output: summarizeToolOutput(prepared.tool, executed.output)
+    output: summarizeToolOutput(prepared.tool, executed.output),
+    rawOutput: executed.output
   });
 
   for (const event of executed.events) {

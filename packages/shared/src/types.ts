@@ -69,6 +69,7 @@ export type AgentEvent =
       toolName: string;
       toolCallId: string;
       output?: unknown;
+      rawOutput?: unknown;
     }
   | {
       type: "search_results";
