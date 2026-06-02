@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "prisma": "DATABASE_URL=file:../data/dev.db prisma",
+    "studio": "DATABASE_URL=file:../data/dev.db prisma studio",
     "start": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
