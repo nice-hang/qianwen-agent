@@ -12,6 +12,7 @@ export interface AgentRunInput {
   conversationId: string;
   messages: ChatMessage[];
   mode?: "fast" | "deep";
+  conversationSummary?: string | null;
 }
 
 export interface AgentRunResult {

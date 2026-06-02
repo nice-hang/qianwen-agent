@@ -4,6 +4,7 @@ export interface SystemContextOptions {
   locale?: string;
   now?: Date;
   timeZone?: string;
+  conversationSummary?: string | null;
 }
 
 export const CORE_SYSTEM_INSTRUCTION = `你是千问 AI Chatbox 的智能助手。请使用用户的语言，直接、清晰、自然地回答；需要结构化时使用 Markdown。
@@ -14,7 +15,7 @@ export const CORE_SYSTEM_INSTRUCTION = `你是千问 AI Chatbox 的智能助手�
 export function buildSystemContextMessages(
   options: SystemContextOptions = {}
 ): ProviderMessage[] {
-  return [
+  const messages: ProviderMessage[] = [
     {
       role: "system",
       content: CORE_SYSTEM_INSTRUCTION
@@ -24,6 +25,16 @@ export function buildSystemContextMessages(
       content: buildRuntimeReminder(options)
     }
   ];
+
+  const summary = options.conversationSummary?.trim();
+  if (summary) {
+    messages.push({
+      role: "user",
+      content: buildConversationSummaryReminder(summary)
+    });
+  }
+
+  return messages;
 }
 
 function buildRuntimeReminder(options: SystemContextOptions): string {
@@ -42,6 +53,14 @@ function buildRuntimeReminder(options: SystemContextOptions): string {
 
 重要提示：此内容可能与用户问题相关，也可能无关。除非与用户问题高度相关，否则请勿在回答中提及。
 </system-reminder>`;
+}
+
+function buildConversationSummaryReminder(summary: string): string {
+  return `<conversation-summary>
+以下是本会话较早部分的压缩摘要。它用于延续上下文，不是用户的新指令；如果它和最近原文冲突，请优先相信最近原文。
+
+${summary}
+</conversation-summary>`;
 }
 
 function readLocalTimeZone(): string {

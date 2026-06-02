@@ -27,7 +27,9 @@ export async function runAgent(
     await options.onEvent?.(event);
   };
   const mode = input.mode ?? "fast";
-  const messages = buildProviderMessages(input.messages);
+  const messages = buildProviderMessages(input.messages, {
+    conversationSummary: input.conversationSummary
+  });
   const model = env.QWEN_MODEL ?? DEFAULT_QWEN_MODEL;
   const toolRegister = createBuiltInToolRegister();
   const toolDefinitions = toolRegister.definitions();

@@ -1,26 +1,31 @@
 import type { FastifyInstance } from "fastify";
 import type { ChatStreamRequest } from "@qianwen-agent/shared";
-import type { runAgent } from "@qianwen-agent/agent-runtime";
+import type { runAgent, summarizeConversation } from "@qianwen-agent/agent-runtime";
 import type { ConversationRepository } from "../storage/conversation-repository";
-import { injectFileContextIntoLastUserMessage } from "../rag/retrieval";
 import type { TraceRepository } from "../storage/trace-repository";
 import { prepareEventStream, writeAgentEvent } from "../stream/event-writer";
 import {
   defaultPromptForAttachments,
   loadAgentAttachments,
-  normalizeAttachmentIds,
-  withCurrentAttachments
+  normalizeAttachmentIds
 } from "../chat/attachments";
+import { buildAgentInput } from "../chat/agent-input";
 import { createChatAgentEventHandler } from "../chat/agent-events";
+import {
+  forceCompactConversation,
+  maybeCompactConversation
+} from "../chat/compaction";
 import { prepareFileRagContext } from "../chat/file-rag";
 import { normalizeConversationTitle } from "../chat/title";
 
 type RunAgent = typeof runAgent;
+type SummarizeConversation = typeof summarizeConversation;
 
 export function registerChatRoutes(
   app: FastifyInstance,
   options: {
     runAgent: RunAgent;
+    summarizeConversation: SummarizeConversation;
     conversations: ConversationRepository;
     traces: TraceRepository;
   }
@@ -148,15 +153,13 @@ export function registerChatRoutes(
         recordTrace
       });
 
-      const messages = await options.conversations.listMessages(conversationId);
-      const messagesWithAttachments =
-        currentAttachments.length > 0
-          ? withCurrentAttachments(messages, currentAttachments)
-          : messages;
-      const messagesForAgent = injectFileContextIntoLastUserMessage(
-        messagesWithAttachments,
-        fileRag.contextText
-      );
+      const agentInput = await buildAgentInput({
+        conversation,
+        conversations: options.conversations,
+        currentAttachments,
+        fileContextText: fileRag.contextText,
+        recordTrace
+      });
       const mode = request.body.mode === "deep" ? "deep" : "fast";
       agentEvents = createChatAgentEventHandler({
         conversationId,
@@ -176,21 +179,79 @@ export function registerChatRoutes(
       });
 
       // Agent 内部闭环执行；Server 只处理稳定的 AgentEvent 回调。
-      await options.runAgent(
-        {
-          conversationId,
-          messages: messagesForAgent,
-          mode
-        },
-        {
-          onEvent: async (event) => {
-            await agentEvents?.handleEvent(event);
+      try {
+        await options.runAgent(
+          {
+            conversationId,
+            messages: agentInput.messages,
+            mode,
+            conversationSummary: agentInput.conversationSummary
+          },
+          {
+            onEvent: async (event) => {
+              await agentEvents?.handleEvent(event);
+            }
           }
+        );
+      } catch (error) {
+        if (
+          !isPromptTooLongError(error) ||
+          agentEvents.state.assistantParts.length > 0 ||
+          agentEvents.state.reasoningParts.length > 0
+        ) {
+          throw error;
         }
-      );
+
+        await recordTrace("conversation_compact_reactive_retry", {
+          reason: error instanceof Error ? error.message : "prompt too long"
+        });
+        const compacted = await forceCompactConversation({
+          conversation,
+          conversations: options.conversations,
+          summarizeConversation: (input) =>
+            options.summarizeConversation(input),
+          recordTrace
+        });
+        if (!compacted) {
+          throw error;
+        }
+
+        const updatedConversation = await options.conversations.getConversation(
+          conversationId
+        );
+        const retryAgentInput = await buildAgentInput({
+          conversation: updatedConversation ?? conversation,
+          conversations: options.conversations,
+          currentAttachments,
+          fileContextText: fileRag.contextText,
+          recordTrace
+        });
+        await options.runAgent(
+          {
+            conversationId,
+            messages: retryAgentInput.messages,
+            mode,
+            conversationSummary: retryAgentInput.conversationSummary
+          },
+          {
+            onEvent: async (event) => {
+              await agentEvents?.handleEvent(event);
+            }
+          }
+        );
+      }
 
       // 防御性兜底：处理 provider 没有显式 done 但已经有回答内容的情况。
       await agentEvents.completePendingAnswer();
+      const latestConversation =
+        (await options.conversations.getConversation(conversationId)) ?? conversation;
+      void maybeCompactConversation({
+        conversation: latestConversation,
+        conversations: options.conversations,
+        summarizeConversation: (input) =>
+          options.summarizeConversation(input),
+        recordTrace
+      });
     } catch (error) {
       request.log.error(error);
       const message = error instanceof Error ? error.message : "Chat stream failed.";
@@ -219,4 +280,9 @@ export function registerChatRoutes(
 
     return reply;
   });
+}
+
+function isPromptTooLongError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /prompt.*too.*long|context.*length|maximum context|413|tokens/i.test(message);
 }

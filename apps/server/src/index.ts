@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import { runAgent } from "@qianwen-agent/agent-runtime";
+import { runAgent, summarizeConversation } from "@qianwen-agent/agent-runtime";
 import { registerChatRoutes } from "./api/chat";
 import { registerAttachmentRoutes } from "./api/attachments";
 import { registerConversationRoutes } from "./api/conversations";
@@ -33,6 +33,7 @@ export function buildServer() {
   registerConversationRoutes(app, conversationRepository);
   registerChatRoutes(app, {
     runAgent,
+    summarizeConversation,
     conversations: conversationRepository,
     traces: traceRepository
   });

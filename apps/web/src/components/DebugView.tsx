@@ -835,6 +835,25 @@ function formatCurl(request: ProviderRequestData): string {
 
 function eventSummary(event: AgentTraceEvent): string {
   const data = asRecord(event.data);
+  if (event.type === "conversation_compact_check") {
+    const shouldCompact = data.shouldCompact ? "触发" : "未触发";
+    return `${shouldCompact} · ${data.activeContextTokens ?? 0}/${data.thresholdTokens ?? 0} tokens · ${data.candidateMessages ?? 0} 条`;
+  }
+  if (event.type === "conversation_compact_injected") {
+    return `已注入摘要 · 省略 ${data.omittedMessages ?? 0} 条`;
+  }
+  if (event.type === "conversation_compact_started") {
+    return `开始压缩 · ${data.messageCount ?? 0} 条`;
+  }
+  if (event.type === "conversation_compact_done") {
+    return `压缩完成 · ${data.summaryChars ?? 0} 字`;
+  }
+  if (event.type === "conversation_compact_error") {
+    return `压缩失败 · ${data.message ?? ""}`;
+  }
+  if (event.type === "conversation_compact_reactive_retry") {
+    return "上下文过长，压缩后重试";
+  }
   if (typeof data.text === "string") return data.text.slice(0, 90);
   if (typeof data.toolName === "string") return data.toolName;
   if (typeof data.query === "string") return data.query;

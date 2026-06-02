@@ -17,6 +17,8 @@ export function toConversation(conversation: DbConversation): Conversation {
     id: conversation.id,
     title: conversation.title,
     summary: conversation.summary,
+    summaryMessageId: conversation.summaryMessageId,
+    summaryUpdatedAt: conversation.summaryUpdatedAt?.toISOString() ?? null,
     createdAt: conversation.createdAt.toISOString(),
     updatedAt: conversation.updatedAt.toISOString()
   };

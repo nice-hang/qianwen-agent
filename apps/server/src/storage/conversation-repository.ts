@@ -207,6 +207,23 @@ export function createConversationRepository(db: PrismaClient) {
     });
   }
 
+  async function updateSummary(input: {
+    conversationId: string;
+    summary: string;
+    summaryMessageId: string;
+  }): Promise<Conversation> {
+    const conversation = await db.conversation.update({
+      where: { id: input.conversationId },
+      data: {
+        summary: input.summary,
+        summaryMessageId: input.summaryMessageId,
+        summaryUpdatedAt: new Date()
+      }
+    });
+
+    return toConversation(conversation);
+  }
+
   return {
     listConversations,
     createConversation,
@@ -218,6 +235,7 @@ export function createConversationRepository(db: PrismaClient) {
     updateAttachmentParseState,
     getAttachment,
     listAttachmentsForAgent,
-    touchConversation
+    touchConversation,
+    updateSummary
   };
 }

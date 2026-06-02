@@ -36,6 +36,8 @@ export interface Conversation {
   id: string;
   title: string;
   summary?: string | null;
+  summaryMessageId?: string | null;
+  summaryUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
