@@ -12,6 +12,7 @@ export function registerConversationRoutes(
 
   app.get<{
     Params: { conversationId: string };
+    Querystring: { limit?: string };
   }>("/api/conversations/:conversationId/messages", async (request, reply) => {
     const conversation = await conversations.getConversation(
       request.params.conversationId
@@ -24,7 +25,18 @@ export function registerConversationRoutes(
 
     return {
       conversation,
-      messages: await conversations.listMessages(conversation.id)
+      messages: await conversations.listMessages(conversation.id, {
+        limit: parseMessageLimit(request.query.limit)
+      })
     };
   });
+}
+
+function parseMessageLimit(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+
+  const limit = Number(value);
+  if (!Number.isInteger(limit) || limit <= 0) return undefined;
+
+  return Math.min(limit, 200);
 }

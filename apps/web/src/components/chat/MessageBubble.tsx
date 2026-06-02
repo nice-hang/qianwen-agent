@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type {
   ChatAttachment,
   ChatMessage,
@@ -6,11 +6,13 @@ import type {
 } from "@qianwen-agent/shared";
 import { MarkdownRenderer } from "../markdown/MarkdownRenderer";
 
-export function MessageBubble(props: {
+interface MessageBubbleProps {
   message: ChatMessage;
   onOpenSources: (sources: SearchSource[]) => void;
   resolveAttachmentUrl: (url: string) => string;
-}) {
+}
+
+export const MessageBubble = memo(function MessageBubble(props: MessageBubbleProps) {
   const { message } = props;
   const sources = message.sources ?? [];
   const hasReasoning = Boolean(message.reasoningContent);
@@ -45,7 +47,7 @@ export function MessageBubble(props: {
       ) : null}
     </article>
   );
-}
+});
 
 export function FileAttachmentChip(props: { attachment: ChatAttachment }) {
   const statusText =

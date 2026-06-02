@@ -1,4 +1,5 @@
 import type { ComponentPropsWithoutRef } from "react";
+import { memo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CodeBlock } from "./CodeBlock";
@@ -41,7 +42,9 @@ const components = {
   }
 } satisfies Components;
 
-export function MarkdownRenderer(props: MarkdownRendererProps) {
+export const MarkdownRenderer = memo(function MarkdownRenderer(
+  props: MarkdownRendererProps
+) {
   return (
     <div className="markdown-renderer">
       <ReactMarkdown components={components} remarkPlugins={[remarkGfm]}>
@@ -49,4 +52,4 @@ export function MarkdownRenderer(props: MarkdownRendererProps) {
       </ReactMarkdown>
     </div>
   );
-}
+});

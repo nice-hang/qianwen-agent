@@ -36,14 +36,18 @@ export function createConversationRepository(db: PrismaClient) {
     return conversation ? toConversation(conversation) : null;
   }
 
-  async function listMessages(conversationId: string): Promise<ChatMessage[]> {
+  async function listMessages(
+    conversationId: string,
+    options: { limit?: number } = {}
+  ): Promise<ChatMessage[]> {
     const messages = await db.message.findMany({
       where: { conversationId },
       include: { attachments: true },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: options.limit ? "desc" : "asc" },
+      take: options.limit
     });
 
-    return messages.map(toChatMessage);
+    return (options.limit ? messages.reverse() : messages).map(toChatMessage);
   }
 
   async function addMessage(input: {

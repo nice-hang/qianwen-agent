@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import type {
   ChatAttachment,
   ChatMessage,
@@ -12,18 +12,17 @@ import "./ChatView.css";
 
 interface ChatViewProps {
   activeConversation?: Conversation;
-  draft: string;
   error?: string;
+  isLoadingMessages: boolean;
   isSending: boolean;
   messages: ChatMessage[];
   mode: "fast" | "deep";
   selectedAttachments: ChatAttachment[];
-  onDraftChange: (draft: string) => void;
   onFileSelected: (file: File) => void;
   onImageSelected: (file: File) => void;
   onModeChange: (mode: "fast" | "deep") => void;
   onRemoveAttachment: (attachmentId: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>, draft: string) => void;
   resolveAttachmentUrl: (url: string) => string;
 }
 
@@ -33,6 +32,12 @@ export function ChatView(props: ChatViewProps) {
     title: string;
     sources: SearchSource[];
   }>();
+  const openSources = useCallback((sources: SearchSource[]) => {
+    setSourceDrawer({
+      title: `参考了 ${sources.length} 篇结果`,
+      sources
+    });
+  }, []);
 
   return (
     <section className={isEmpty ? "chat-panel empty" : "chat-panel"}>
@@ -42,13 +47,9 @@ export function ChatView(props: ChatViewProps) {
 
       <MessageList
         activeConversation={props.activeConversation}
+        isLoading={props.isLoadingMessages}
         messages={props.messages}
-        onOpenSources={(sources) =>
-          setSourceDrawer({
-            title: `参考了 ${sources.length} 篇结果`,
-            sources
-          })
-        }
+        onOpenSources={openSources}
         resolveAttachmentUrl={props.resolveAttachmentUrl}
       />
 
@@ -64,10 +65,8 @@ export function ChatView(props: ChatViewProps) {
       {props.error ? <div className="error">{props.error}</div> : null}
 
       <Composer
-        draft={props.draft}
         isSending={props.isSending}
         mode={props.mode}
-        onDraftChange={props.onDraftChange}
         onFileSelected={props.onFileSelected}
         onImageSelected={props.onImageSelected}
         onModeChange={props.onModeChange}

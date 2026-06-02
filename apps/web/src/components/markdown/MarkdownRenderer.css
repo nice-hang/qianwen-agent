@@ -130,6 +130,15 @@
   overflow: auto;
 }
 
+.md-code-plain {
+  margin: 0;
+  overflow: auto;
+  padding: 14px 16px;
+  background: rgba(17, 17, 51, 0.02);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
 .md-code-body pre,
 .md-code-body code {
   font-family:

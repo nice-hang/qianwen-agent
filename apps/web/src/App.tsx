@@ -1,4 +1,11 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  startTransition,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import {
   createApiClient,
   type AgentEvent,
@@ -16,6 +23,7 @@ import { readError } from "./utils";
 import "./App.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:3001";
+const MESSAGE_HISTORY_LIMIT = 120;
 const api = createApiClient({
   baseUrl: API_BASE_URL
 });
@@ -31,11 +39,13 @@ export function App() {
   const [activeRunId, setActiveRunId] = useState<string>();
   const [runEvents, setRunEvents] = useState<AgentTraceEvent[]>([]);
   const [runUsage, setRunUsage] = useState<ModelUsage>();
-  const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [mode, setMode] = useState<"fast" | "deep">("fast");
   const [isSending, setIsSending] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [error, setError] = useState<string>();
+  const activeConversationIdRef = useRef(activeConversationId);
+  const messageCacheRef = useRef(new Map<string, ChatMessage[]>());
 
   const activeConversation = useMemo(
     () =>
@@ -51,6 +61,10 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
+
+  useEffect(() => {
     function handlePopState() {
       setActiveConversationId(getConversationIdFromLocation());
       setView("chat");
@@ -64,9 +78,13 @@ export function App() {
     // 切换会话时重新拉服务端状态，避免使用过期本地消息。
     if (!activeConversationId) {
       setMessages([]);
+      setIsLoadingMessages(false);
       return;
     }
 
+    const cachedMessages = messageCacheRef.current.get(activeConversationId);
+    setMessages(cachedMessages ?? []);
+    setIsLoadingMessages(!cachedMessages);
     void loadMessages(activeConversationId);
   }, [activeConversationId]);
 
@@ -103,8 +121,21 @@ export function App() {
   }
 
   async function loadMessages(conversationId: string) {
-    const response = await withRequest(() => api.listMessages(conversationId));
-    if (response) setMessages(response.messages);
+    const response = await withRequest(() =>
+      api.listMessages(conversationId, { limit: MESSAGE_HISTORY_LIMIT })
+    );
+    if (!response) {
+      if (activeConversationIdRef.current === conversationId) {
+        setIsLoadingMessages(false);
+      }
+      return;
+    }
+
+    messageCacheRef.current.set(conversationId, response.messages);
+    if (activeConversationIdRef.current === conversationId) {
+      startTransition(() => setMessages(response.messages));
+      setIsLoadingMessages(false);
+    }
   }
 
   async function startNewChat() {
@@ -131,7 +162,7 @@ export function App() {
     setRunUsage(response.usage);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>, draft: string) {
     event.preventDefault();
     const text = draft.trim();
     if ((!text && attachments.length === 0) || isSending) return;
@@ -154,7 +185,6 @@ export function App() {
   }
 
   function beginSending(optimistic: OptimisticMessages) {
-    setDraft("");
     setAttachments([]);
     setError(undefined);
     setIsSending(true);
@@ -411,12 +441,11 @@ export function App() {
       {view === "chat" ? (
         <ChatView
           activeConversation={activeConversation}
-          draft={draft}
           error={error}
+          isLoadingMessages={isLoadingMessages}
           isSending={isSending}
           messages={messages}
           mode={mode}
-          onDraftChange={setDraft}
           onFileSelected={(file) => void uploadFile(file)}
           onImageSelected={(file) => void uploadImage(file)}
           onModeChange={setMode}

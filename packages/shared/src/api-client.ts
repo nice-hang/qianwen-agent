@@ -26,6 +26,10 @@ export interface MessagesResponse {
   messages: ChatMessage[];
 }
 
+export interface ListMessagesOptions {
+  limit?: number;
+}
+
 export interface UploadImageResponse {
   attachment: ChatAttachment;
 }
@@ -61,9 +65,15 @@ export function createApiClient(options: ApiClientOptions = {}) {
       return response.json() as Promise<ConversationsResponse>;
     },
 
-    async listMessages(conversationId: string): Promise<MessagesResponse> {
+    async listMessages(
+      conversationId: string,
+      listOptions: ListMessagesOptions = {}
+    ): Promise<MessagesResponse> {
+      const params = new URLSearchParams();
+      if (listOptions.limit) params.set("limit", String(listOptions.limit));
+      const query = params.size ? `?${params.toString()}` : "";
       const response = await fetchImpl(
-        `${baseUrl}/api/conversations/${conversationId}/messages`
+        `${baseUrl}/api/conversations/${conversationId}/messages${query}`
       );
 
       if (!response.ok) {

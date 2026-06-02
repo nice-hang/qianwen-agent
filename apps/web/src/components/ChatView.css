@@ -75,6 +75,13 @@
   text-align: center;
 }
 
+.message-loading {
+  width: min(800px, 100%);
+  margin: 32px auto 0;
+  color: #8a8a86;
+  font-size: 14px;
+}
+
 .empty-state h1,
 .empty-state h2 {
   margin: 0;

@@ -3,22 +3,35 @@ import type { ChatAttachment } from "@qianwen-agent/shared";
 import { FileAttachmentChip } from "./MessageBubble";
 
 export function Composer(props: {
-  draft: string;
   isSending: boolean;
   mode: "fast" | "deep";
   selectedAttachments: ChatAttachment[];
-  onDraftChange: (draft: string) => void;
   onFileSelected: (file: File) => void;
   onImageSelected: (file: File) => void;
   onModeChange: (mode: "fast" | "deep") => void;
   onRemoveAttachment: (attachmentId: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>, draft: string) => void;
   resolveAttachmentUrl: (url: string) => string;
 }) {
+  const [draft, setDraft] = useState("");
   const [isUploadMenuOpen, setUploadMenuOpen] = useState(false);
+  const canSubmit =
+    !props.isSending &&
+    (draft.trim().length > 0 || props.selectedAttachments.length > 0);
 
   return (
-    <form className="composer" onSubmit={props.onSubmit}>
+    <form
+      className="composer"
+      onSubmit={(event) => {
+        if (!canSubmit) {
+          event.preventDefault();
+          return;
+        }
+
+        props.onSubmit(event, draft);
+        setDraft("");
+      }}
+    >
       {props.selectedAttachments.length > 0 ? (
         <AttachmentPreviewStrip
           attachments={props.selectedAttachments}
@@ -27,8 +40,8 @@ export function Composer(props: {
         />
       ) : null}
       <textarea
-        value={props.draft}
-        onChange={(event) => props.onDraftChange(event.target.value)}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
         onKeyDown={handleComposerKeyDown}
         placeholder="向千问提问"
         rows={3}
@@ -93,10 +106,7 @@ export function Composer(props: {
         <button
           className="send-button"
           type="submit"
-          disabled={
-            props.isSending ||
-            (!props.draft.trim() && props.selectedAttachments.length === 0)
-          }
+          disabled={!canSubmit}
           aria-label="Send message"
         >
           ↑
