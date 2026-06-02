@@ -31,7 +31,11 @@ export const MessageBubble = memo(function MessageBubble(props: MessageBubblePro
       ) : null}
       {hasReasoning ? <ThinkingBlock message={message} /> : null}
       {message.content ? (
-        <MarkdownRenderer content={message.content} />
+        message.role === "user" ? (
+          <div className="user-content">{message.content}</div>
+        ) : (
+          <MarkdownRenderer content={message.content} />
+        )
       ) : placeholder ? (
         <p>{placeholder}</p>
       ) : null}

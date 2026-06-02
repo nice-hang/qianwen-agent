@@ -107,7 +107,8 @@
   width: min(800px, calc(100% - 48px));
 }
 
-.bubble.user p {
+.bubble.user .user-content,
+.bubble.user > p {
   width: fit-content;
   max-width: min(760px, 100%);
   margin: 0;
@@ -660,7 +661,8 @@
     font-size: 26px;
   }
 
-  .bubble.user p {
+  .bubble.user .user-content,
+  .bubble.user > p {
     max-width: 100%;
   }
 
